@@ -5,7 +5,7 @@ from dm_control import mjcf
 
 from abstractcontrol.door_entity import DoorEntity
 
-class MinigridMujoco(random_goal_maze.RepeatSingleGoalMaze):
+class MazeTaskTest(random_goal_maze.RepeatSingleGoalMaze):
     def __init__(self, **kwarg):
         super().__init__(**kwarg)
 

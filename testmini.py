@@ -16,8 +16,10 @@ from dm_control import composer
 from dm_control import mjcf
 import PIL.Image
 import numpy as np
+from abstractcontrol.maze_task_test import MazeTaskTest
 
-from abstractcontrol.minigrid_mujoco import MinigridMujoco
+from abstractcontrol.minimujo_arena import MinimujoArena
+from abstractcontrol.minimujo_task import MinimujoTask
 
 # Set the wall and floor textures to match DMLab and set the skybox.
 skybox_texture = labmaze_textures.SkyBox(style='sky_03')
@@ -26,7 +28,8 @@ floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
 # highEnv = gymnasium.make("MiniGrid-LavaCrossingS11N5-v0")
-highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
+# highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
+highEnv = gymnasium.make("MiniGrid-MemoryS7-v0")
 highEnv.reset()
 
 # print(highEnv.unwrapped.grid.grid)
@@ -47,7 +50,7 @@ wallEntities = [
 # print(labdefaults.SPAWN_TOKEN)
 labmazeStr = '\n'.join(wallEntities) + '\n'
 maze = labmaze.FixedMazeWithRandomGoals(labmazeStr)
-print(maze.entity_layer)
+# print(maze.entity_layer)
 # highEnv.pprint_grid()
 # print([method_name for method_name in dir(highEnv.unwrapped)
 #                   if callable(getattr(highEnv.unwrapped, method_name))])
@@ -76,18 +79,19 @@ walker = jumping_ball.RollingBallWithHead()
 #     corridor_width=4.,
 #     corridor_length=30.,
 # )
-arena = mazes.RandomMazeWithTargets(
-    x_cells=11,
-    y_cells=11,
-    xy_scale=3,
-    max_rooms=4,
-    room_min_size=4,
-    room_max_size=5,
-    spawns_per_room=1,
-    targets_per_room=3,
-    skybox_texture=skybox_texture,
-    wall_textures=wall_textures,
-    floor_textures=floor_textures)
+# arena = mazes.RandomMazeWithTargets(
+#     x_cells=11,
+#     y_cells=11,
+#     xy_scale=3,
+#     max_rooms=4,
+#     room_min_size=4,
+#     room_max_size=5,
+#     spawns_per_room=1,
+#     targets_per_room=3,
+#     skybox_texture=skybox_texture,
+#     wall_textures=wall_textures,
+#     floor_textures=floor_textures)
+arena = MinimujoArena(highEnv.unwrapped)
 
 # task = corridor_tasks.RunThroughCorridor(
 #     walker=walker,
@@ -98,9 +102,9 @@ arena = mazes.RandomMazeWithTargets(
 #     control_timestep=0.03,
 # )
 # task = random_goal_maze.RepeatSingleGoalMaze(
-task = MinigridMujoco(
+task = MinimujoTask(
   walker=walker,
-  maze_arena=arena,
+  minimujo_arena=arena,
   physics_timestep=0.005,
   control_timestep=0.03,
   contact_termination=False,
