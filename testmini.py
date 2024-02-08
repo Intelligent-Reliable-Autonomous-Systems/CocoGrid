@@ -28,8 +28,8 @@ floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
 # highEnv = gymnasium.make("MiniGrid-LavaCrossingS11N5-v0")
-# highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
-highEnv = gymnasium.make("MiniGrid-MemoryS7-v0")
+highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
+# highEnv = gymnasium.make("MiniGrid-MemoryS7-v0")
 highEnv.reset()
 
 # print(highEnv.unwrapped.grid.grid)
@@ -112,7 +112,7 @@ task = MinimujoTask(
 
 env = composer.Environment(
     task=task,
-    time_limit=10,
+    time_limit=100,
     random_state=np.random.RandomState(42),
     strip_singleton_obs_buffer_dim=True,
 )
@@ -130,6 +130,23 @@ env.reset()
 # img = PIL.Image.fromarray(np.hstack(pixels))
 # img.save('test.png')
 
+print(env.action_spec())
+
+import keyboard
+
+def policy(time):
+    up = 0
+    right = 0
+    if keyboard.is_pressed('right'):
+        right += 1
+    if keyboard.is_pressed('left'):
+        right -= 1
+    if keyboard.is_pressed('up'):
+        up += 1
+    if keyboard.is_pressed('down'):
+        up -= 1
+    return np.array([up, right])
+
 from dm_control import viewer
 
-viewer.launch(env)
+viewer.launch(env, policy=policy)

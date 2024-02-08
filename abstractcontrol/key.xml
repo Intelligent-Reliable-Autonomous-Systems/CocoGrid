@@ -1,0 +1,7 @@
+<mujoco model="door">
+  <worldbody>
+    <body name="key_box" pos="0 0 0.2">
+      <geom name="key_box_geom" type="box" size="0.2 0.2 0.2"/>
+    </body>
+  </worldbody>
+</mujoco>
