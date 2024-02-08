@@ -132,18 +132,20 @@ env.reset()
 
 print(env.action_spec())
 
-import keyboard
+# import keyboard
+import glfw
 
 def policy(time):
+    ctx = glfw.get_current_context()
     up = 0
     right = 0
-    if keyboard.is_pressed('right'):
+    if glfw.get_key(ctx, glfw.KEY_RIGHT):
         right += 1
-    if keyboard.is_pressed('left'):
+    if glfw.get_key(ctx, glfw.KEY_LEFT):
         right -= 1
-    if keyboard.is_pressed('up'):
+    if glfw.get_key(ctx, glfw.KEY_UP):
         up += 1
-    if keyboard.is_pressed('down'):
+    if glfw.get_key(ctx, glfw.KEY_DOWN):
         up -= 1
     return np.array([up, right])
 
