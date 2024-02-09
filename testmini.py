@@ -144,11 +144,12 @@ def policy(time):
     if glfw.get_key(ctx, glfw.KEY_LEFT):
         right -= 1
     if glfw.get_key(ctx, glfw.KEY_UP):
-        up += 1
-    if glfw.get_key(ctx, glfw.KEY_DOWN):
         up -= 1
+    if glfw.get_key(ctx, glfw.KEY_DOWN):
+        up += 1
     return np.array([up, right])
 
 from dm_control import viewer
 
 viewer.launch(env, policy=policy)
+# viewer.launch(env)

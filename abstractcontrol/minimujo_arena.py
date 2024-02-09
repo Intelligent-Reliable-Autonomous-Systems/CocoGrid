@@ -86,7 +86,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                     self.attach(entity)
                 elif key is Key:
                     entity = KeyEntity(color=color)
-                    self.attach(entity)
+                    entity.create_root_joints(self.attach(entity))
                 elif key is Ball:
                     entity = target_sphere.TargetSphere(radius=5)
                     self.attach(entity)

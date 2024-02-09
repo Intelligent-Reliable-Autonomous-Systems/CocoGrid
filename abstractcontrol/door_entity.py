@@ -15,21 +15,21 @@ class DoorEntity(composer.Entity):
         base_scale = 0.45
 
         hinge_base_body = self.model.find('body', 'hinge_base')
-        hinge_base_body.set_attributes(pos=[0, -base_scale * xy_scale, 0])
+        hinge_base_body.set_attributes(pos=[0, -0.85 * base_scale * xy_scale, 0])
         
         hinge_base_geom = self.model.find('geom','hinge_base_geom')
-        hinge_base_geom.set_attributes(size=[0.04*xy_scale], rgba=rgba)
+        hinge_base_geom.set_attributes(size=[0.1*xy_scale], rgba=rgba)
 
         hinge_column_geom = self.model.find('geom','hinge_column_geom')
-        hinge_column_geom.set_attributes(size=[0.04*xy_scale], 
+        hinge_column_geom.set_attributes(size=[0.1*xy_scale], 
                                          fromto=[0, 0, 0, 0, 0, z_height],
                                          rgba=rgba)
         
         door_body = self.model.find('body','door')
-        door_body.set_attributes(pos=[0, 0.96 * base_scale * xy_scale, z_height / 2])
+        door_body.set_attributes(pos=[0, 0.8 * base_scale * xy_scale, z_height / 2])
 
         door_geom = self.model.find('geom','door_geom')
-        door_geom.set_attributes(size=[0.1*xy_scale, base_scale * xy_scale, 0.48*z_height], rgba=rgba)
+        door_geom.set_attributes(size=[0.1*xy_scale, 0.8 * base_scale * xy_scale, 0.48*z_height], rgba=rgba)
 
         lock_body = self.model.find('body', 'lock')
         lock_body.set_attributes(pos=[0, -base_scale * xy_scale, 0])
