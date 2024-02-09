@@ -1,5 +1,6 @@
 from dm_control import composer
 from dm_control import mjcf
+import numpy as np
 
 from abstractcontrol.color import getColorRGBA
 
@@ -9,6 +10,7 @@ class DoorEntity(composer.Entity):
         self.color = color
         rgba = getColorRGBA(color)
         self.is_locked = is_locked
+        self.default_is_locked = is_locked
 
         self.model = mjcf.from_path('abstractcontrol/door.xml')
         # test = mjcf.RootElement()
@@ -31,15 +33,19 @@ class DoorEntity(composer.Entity):
         door_geom = self.model.find('geom','door_geom')
         door_geom.set_attributes(size=[0.1*xy_scale, 0.8 * base_scale * xy_scale, 0.48*z_height], rgba=rgba)
 
-        lock_body = self.model.find('body', 'lock')
+        lock_body = self.model.find('body', 'lock_base')
         lock_body.set_attributes(pos=[0, -base_scale * xy_scale, 0])
 
         lock_front_geom = self.model.find('geom','lock_front_geom')
         lock_front_geom.set_attributes(size=[0.05*xy_scale, base_scale * xy_scale, 0.48*z_height], 
                                        rgba=rgba, pos=[0.5 * base_scale * xy_scale, 0.96 * base_scale * xy_scale, z_height / 2])
         
+        self._lock_slide = self.model.find('joint', 'lock_slide')
+
         if not is_locked:
             lock_body.remove()
+
+        self._keys = []
         
         # self.model = mjcf.RootElement()
         # self.thigh = self.model.worldbody.add('body')
@@ -54,6 +60,33 @@ class DoorEntity(composer.Entity):
         #     'site', type='cylinder', size=self._hinge_geom.size*1.01, rgba=[0, 1, 0, 0.2])
         # self._sensor = self._mjcf_model.sensor.add('touch', site=self._site)
         self._num_activated_steps = 0
+
+    def register_key(self, key):
+        if key.color == self.color:
+            self._keys.append(key)
+
+    def before_step(self, physics, random_state):
+        # key_joints = physics.bind(self._root_joints)
+        # key_joints.qvel += np.array([0, 0.1, 0])
+        if self.is_locked:
+            door_pos = self.get_pose(physics)[0].base
+            for key in self._keys:
+                key_pos = physics.bind(key._root_joints).qpos.base
+                # key_joints = physics.bind(self.model).pos
+                diff = door_pos - key_pos
+                diff[2] = 0
+                if np.linalg.norm(diff) < 3:
+                    print("The key is in range!")
+                    self.is_locked = False
+                    # self.model.find('geom','lock_front_geom').remove()
+                    physics.bind(self._lock_slide).qpos = np.array([-100])
+                    break
+
+        return super().before_step(physics, random_state)
+    
+    def reset(self):
+        self.is_locked = self.default_is_locked
+        self._keys = []
 
     @property
     def mjcf_model(self):

@@ -22,8 +22,11 @@
         </body>
       </body>
     </body>
-    <body name="lock" pos="0 -1 0">
-      <geom name="lock_front_geom" type="box" size="0.07 1 1.45" pos="0.2 0.96 1.5"/>
+    <body name="lock_base" pos="0 -1 0">
+      <joint name="lock_slide" type="slide" axis="1 0 0" />
+      <body name="lock_body">
+        <geom name="lock_front_geom" type="box" size="0.07 1 1.45" pos="0.2 0.96 1.5"/>
+      </body>
     </body>
     <!-- <body pos="0 0 0.6" quat="1 0 0 -1" name="head_body">
       <body name="egocentric_camera" pos="0 0.15 0.9" zaxis="0 -0.99503719021 0.09950371902">

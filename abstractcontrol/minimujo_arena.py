@@ -173,6 +173,9 @@ class MinimujoArena(mazes.MazeWithTargets):
 
         for door in self._mini_entity_map[Door]:
             door['entity'].set_pose(physics, position=door['world_pos'], quaternion=door_quats[door['dir']])
+            door['entity'].reset()
+            for key in self._mini_entity_map[Key]:
+                door['entity'].register_key(key['entity'])
 
         for key in self._mini_entity_map[Key]:
             key['entity'].set_pose(physics, position=key['world_pos'])

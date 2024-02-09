@@ -37,6 +37,7 @@ class KeyEntity(composer.Entity):
     def set_pose(self, physics, position=None, quaternion=None):
         if position is not None:
             if self._root_joints is not None:
+                # position = physics.bind(self._walker.root_body).xpos.base + np.array([0,0,2])
                 physics.bind(self._root_joints).qpos = position
                 # physics.bind(self.model.find_all('joint')).qpos = 0.
             else:
@@ -52,7 +53,6 @@ class KeyEntity(composer.Entity):
             key_pos = key_joints.qpos
             diff = (walker_pos - key_pos).base
             diff[2] = 0
-            print(diff)
             key_joints.qvel += diff
 
         return super().before_substep(physics, random_state)
