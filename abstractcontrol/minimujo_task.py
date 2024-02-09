@@ -48,6 +48,7 @@ class MinimujoTask(composer.Task):
         self._walker = walker
         self._minimujo_arena = minimujo_arena
         self._walker.create_root_joints(self._minimujo_arena.attach(self._walker))
+        self._minimujo_arena.register_walker(self._walker)
 
         self._randomize_spawn_position = randomize_spawn_position
         self._randomize_spawn_rotation = randomize_spawn_rotation

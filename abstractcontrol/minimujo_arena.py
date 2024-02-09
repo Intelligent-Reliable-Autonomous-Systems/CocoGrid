@@ -195,6 +195,13 @@ class MinimujoArena(mazes.MazeWithTargets):
         #     # ball['entity'].set_pose(physics, position=ball['world_pos'])
         #     mjcf.get_attachment_frame(
         #         ball['entity']).pos = ball['world_pos']
+
+    def register_walker(self, walker):
+        self._walker = walker
+        for key in self._mini_entity_map[Key]:
+            key['entity'].register_walker(self._walker)
+
+
     
     # def _build_observables(self):
     #     return self._arena._build_observables()
