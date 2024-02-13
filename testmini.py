@@ -27,7 +27,7 @@ wall_textures = labmaze_textures.WallTextures(style='style_01')
 floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
-# highEnv = gymnasium.make("MiniGrid-LavaCrossingS11N5-v0")
+# highEnv = gymnasium.make("MiniGrid-FourRooms-v0")
 highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
 # highEnv = gymnasium.make("MiniGrid-MemoryS7-v0")
 highEnv.reset()
@@ -91,7 +91,7 @@ walker = jumping_ball.RollingBallWithHead()
 #     skybox_texture=skybox_texture,
 #     wall_textures=wall_textures,
 #     floor_textures=floor_textures)
-arena = MinimujoArena(highEnv.unwrapped)
+arena = MinimujoArena(highEnv.unwrapped, xy_scale=1)
 
 # task = corridor_tasks.RunThroughCorridor(
 #     walker=walker,

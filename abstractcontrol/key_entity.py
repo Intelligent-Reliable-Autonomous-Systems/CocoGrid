@@ -12,8 +12,8 @@ class KeyEntity(composer.Entity):
 
         self.model = mjcf.from_path('abstractcontrol/key.xml')
 
-        # key_box_geom = self.model.find('geom', 'key_box_geom')
-        # key_box_geom.set_attributes(rgba=rgba)
+        key_box_geom = self.model.find('geom', 'key_box_geom')
+        key_box_geom.set_attributes(rgba=rgba)
 
         self._root_joints = None
         self._walker = None
