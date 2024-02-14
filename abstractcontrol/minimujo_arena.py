@@ -8,10 +8,13 @@ from labmaze import defaults as labdefaults
 from dm_control.locomotion.arenas import labmaze_textures
 from dm_control.locomotion.arenas import mazes
 
-from minigrid.core.world_object import Door, Key, Ball
+from minigrid.core.world_object import Door, Key, Ball, Box
+from abstractcontrol.ball_entity import BallEntity
+from abstractcontrol.box_entity import BoxEntity
 
 
 from abstractcontrol.door_entity import DoorEntity
+from abstractcontrol.grabber import Grabber
 from abstractcontrol.key_entity import KeyEntity
 
 DEFAULT_PHYSICS_TIMESTEP = 0.001
@@ -69,8 +72,21 @@ class MinimujoArena(mazes.MazeWithTargets):
             skybox_texture=skybox_texture,
             wall_textures=wall_textures,
             floor_textures=floor_textures)
+        
+        # actuator = self._mjcf_root.actuator
+        # dummy = self._mjcf_root.worldbody.add('body', name='dummy')
+        # dummy.add('joint', name='grab', type='slide', axis=[1, 0, 0])
+        # print(actuator)
+        # self.grab_control = actuator.add('general', name="grab", joint="grab", ctrlrange=[0, 1], ctrllimited=True, gear="30")
+        self._grabber = Grabber()
+        self.attach(self._grabber)
 
-        self._mini_entity_map = {}
+        self._mini_entity_map = {
+            Ball: [],
+            Box: [],
+            Door: [],
+            Key: []
+        }
         width = self._minigrid.grid.width
         for idx, miniObj in enumerate(self._minigrid.grid.grid):
             if miniObj is not None:
@@ -85,11 +101,14 @@ class MinimujoArena(mazes.MazeWithTargets):
                     entity = DoorEntity(color=color, is_locked=miniObj.is_locked)
                     self.attach(entity)
                 elif key is Key:
-                    entity = KeyEntity(color=color)
+                    entity = KeyEntity(self._grabber, color=color)
                     entity.create_root_joints(self.attach(entity))
                 elif key is Ball:
-                    entity = target_sphere.TargetSphere(radius=5)
-                    self.attach(entity)
+                    entity = BallEntity(self._grabber, color=color)
+                    entity.create_root_joints(self.attach(entity))
+                elif key is Box:
+                    entity = BoxEntity(self._grabber, color=color)
+                    entity.create_root_joints(self.attach(entity))
                 else:
                     entity = None
                 self._mini_entity_map[key].append({
@@ -98,39 +117,11 @@ class MinimujoArena(mazes.MazeWithTargets):
                     'mini_pos': (row, col), 
                     'mini_obj': miniObj
                 })
+        print(self._mini_entity_map.keys())
 
         self.getDoorDirections(charMatrix)
-        
-        # d_positions = [(r, c) for r, row in enumerate(charMatrix) for c, char in enumerate(row) if char == 'D']
-        # for door in self._mini_entity_map[Door]:
-        #     self.attach(door['entity'])
-
-        # for key in self._mini_entity_map[Key]:
-        #     self.attach(key['entity'])
-
-        # self._doors = self.generateDoors(charMatrix)
-        # for door in self._doors:
-        #     self.attach(door[0])
-
-        # self._keys = self.generateKeys(charMatrix)
-        # for key in self._keys:
-        #     self.attach(key[0])
-
-        # for door in self._mini_entity_map[Door]:
-        #     door[0] = DoorEntity()
-
-        # for key in self._mini_entity_map[Key]:
-        #     key[0] = KeyEntity()
-            # mjcf.get_attachment_frame(door[0]).pos = door[1]
-
-        # print(d_positions)
-        self._target2 = target_sphere.TargetSphere(radius=3)
-        self.attach(self._target2)
 
     def getDoorDirections(self, charMatrix):
-        # d_positions = [(r, c) for r, row in enumerate(charMatrix) for c, char in enumerate(row) if char == 'D']
-
-        # doors = []
         for door in self._mini_entity_map[Door]:
             dir = 0
             r, c = door['mini_pos']
@@ -142,21 +133,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                 dir = 1
             elif c + 1 < len(charMatrix) and charMatrix[r][c+1] == '*':
                 dir = 3
-            # world_pos = self.grid_to_world_positions([(r,c)])[0]
-
-            # doors.append((DoorEntity(), world_pos, dir))
             door['dir'] = dir
-    
-    def generateKeys(self, charMatrix):
-        k_positions = [(r, c) for r, row in enumerate(charMatrix) for c, char in enumerate(row) if char == 'K']
-
-        keys = []
-        for r, c in k_positions:
-            world_pos = self.grid_to_world_positions([(r,c)])[0]
-
-            keys.append((KeyEntity(), world_pos))
-
-        return keys
     
     def initialize_arena(self, physics, random_state):
         door_quats = [
@@ -165,11 +142,6 @@ class MinimujoArena(mazes.MazeWithTargets):
             [0, 0, 0, 1],
             [math.sin(math.pi/4), 0, 0, -math.sin(math.pi/4)]
         ]
-        # for door in self._doors:
-        #     door[0].set_pose(physics, position=door[1], quaternion=door_quats[door[2]])
-
-        # for key in self._keys:
-        #     key[0].set_pose(physics, position=key[1])
 
         for door in self._mini_entity_map[Door]:
             door['entity'].set_pose(physics, position=door['world_pos'], quaternion=door_quats[door['dir']])
@@ -182,18 +154,19 @@ class MinimujoArena(mazes.MazeWithTargets):
 
         for ball in self._mini_entity_map[Ball]:
             ball['entity'].set_pose(physics, position=ball['world_pos'])
-            # mjcf.get_attachment_frame(
-            #     ball['entity']).pos = ball['world_pos']
+
+        for box in self._mini_entity_map[Box]:
+            box['entity'].set_pose(physics, position=box['world_pos'])
             
 
 
     def initialize_episode_mjcf(self, random_state):
         super().initialize_episode_mjcf(random_state)
-        self._target_position = self.target_positions[
-            random_state.randint(0, len(self.target_positions))]
-        print(self._target_position, 'targ pos')
-        mjcf.get_attachment_frame(
-            self._target2.mjcf_model).pos = self._target_position
+        # self._target_position = self.target_positions[
+        #     random_state.randint(0, len(self.target_positions))]
+        # print(self._target_position, 'targ pos')
+        # mjcf.get_attachment_frame(
+        #     self._target2.mjcf_model).pos = self._target_position
         # for ball in self._mini_entity_map[Ball]:
         #     # ball['entity'].set_pose(physics, position=ball['world_pos'])
         #     mjcf.get_attachment_frame(
@@ -201,8 +174,7 @@ class MinimujoArena(mazes.MazeWithTargets):
 
     def register_walker(self, walker):
         self._walker = walker
-        for key in self._mini_entity_map[Key]:
-            key['entity'].register_walker(self._walker)
+        self._grabber.register_walker(self._walker)
 
 
     

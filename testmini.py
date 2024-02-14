@@ -27,9 +27,9 @@ wall_textures = labmaze_textures.WallTextures(style='style_01')
 floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
-# highEnv = gymnasium.make("MiniGrid-FourRooms-v0")
-highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
-# highEnv = gymnasium.make("MiniGrid-MemoryS7-v0")
+highEnv = gymnasium.make("MiniGrid-FourRooms-v0")
+# highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
+# highEnv = gymnasium.make("MiniGrid-Playground-v0")
 highEnv.reset()
 
 # print(highEnv.unwrapped.grid.grid)
@@ -139,6 +139,7 @@ def policy(time):
     ctx = glfw.get_current_context()
     up = 0
     right = 0
+    grab = 0
     if glfw.get_key(ctx, glfw.KEY_RIGHT):
         right += 1
     if glfw.get_key(ctx, glfw.KEY_LEFT):
@@ -147,7 +148,9 @@ def policy(time):
         up -= 1
     if glfw.get_key(ctx, glfw.KEY_DOWN):
         up += 1
-    return np.array([up, right])
+    if glfw.get_key(ctx, glfw.KEY_N):
+        grab = 1
+    return np.array([grab, up, right])
 
 from dm_control import viewer
 

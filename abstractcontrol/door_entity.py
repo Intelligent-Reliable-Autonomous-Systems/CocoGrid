@@ -69,13 +69,14 @@ class DoorEntity(composer.Entity):
         # key_joints = physics.bind(self._root_joints)
         # key_joints.qvel += np.array([0, 0.1, 0])
         if self.is_locked:
+            physics.bind(self._lock_slide).qpos = np.array([0])
             door_pos = self.get_pose(physics)[0].base
             for key in self._keys:
                 key_pos = physics.bind(key._root_joints).qpos.base
                 # key_joints = physics.bind(self.model).pos
                 diff = door_pos - key_pos
                 diff[2] = 0
-                if np.linalg.norm(diff) < 3:
+                if np.linalg.norm(diff) < 1:
                     print("The key is in range!")
                     self.is_locked = False
                     # self.model.find('geom','lock_front_geom').remove()

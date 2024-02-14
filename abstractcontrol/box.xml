@@ -1,0 +1,9 @@
+<mujoco model="box">
+  <worldbody>
+    <body name="box_body" pos="0 0 .4">
+      <!-- This joint allows the object to tumble -->
+      <joint type="ball" damping="0.01" />
+      <geom name="box_geom" type="box" size="0.25 0.25 0.25" density="1"/>
+    </body>
+  </worldbody>
+</mujoco>

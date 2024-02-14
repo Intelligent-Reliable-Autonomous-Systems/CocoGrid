@@ -1,36 +1,18 @@
-<mujoco model="door">
+<mujoco model="key">
   <worldbody>
-    <!-- <body name="key_box" pos="0 0 .2">
-      <joint type="ball" damping="0.01" />
-      <geom name="key_box_geom" type="box" size="0.2 0.2 0.2" density="2"/>
-      <site name="box_site"/>
-      <composite type="grid" count="3 1 1" spacing="0.5" offset="1 0 0">
-        <joint kind="main" damping="0.1"/>
-        <tendon kind="main" width="0.01"/>
-        <geom size="0.02" rgba=".8 .2 .1 1"/>
-        <pin coord="0"/>
-      </composite>
-    </body> -->
-    <!-- <body name="handle_base" pos="0 0 3">
-      <geom name="handle2_geom" type="sphere" size="0.05" rgba="0 1 0 1" />
-      <body name="handle1" pos="0 0 0">
-        <geom name="handle1_geom" type="capsule" fromto="0 0 0 0 0 -.9" size="0.05" rgba="1 0 0 1"/>
-        <joint type="ball" damping="0.01" />
-        <body name="handle2" pos="0 0 -1">
-          <geom name="handle0_geom" type="capsule" fromto="0 0 0 0 0 -.9" size="0.05" rgba="0 0 1 1"/>
-          <joint type="ball" damping="0.01" />
-          <body name="key_box" pos="0 0 -1.2">
-            <joint type="ball" damping="0.01" />
-            <geom name="key_box_geom" type="box" size="0.2 0.2 0.2" density="2"/>
-            <site name="box_site"/>
-          </body>
-        </body>
-      </body>
-    </body> -->
-    <body name="key_box" pos="0 0 .2">
-      <joint type="ball" damping="0.01" />
-      <geom name="key_box_geom" type="box" size="0.2 0.2 0.2" density="2"/>
-      <site name="box_site"/>
+    <body name="key_body" pos="0 0 0">
+      <!-- This joint allows the object to tumble -->
+      <joint type="hinge" damping="0.01" axis="0 0 1" />
+      <!-- <geom name="key_handle_geom1" type="box" fromto="0 0 0 .1 .3 .2" size="0.1 0.3 0.2" density="2"/>
+      <geom name="key_handle_geom2" type="box" fromto=".2 0 0 .3 .3 .2" size="0.1 0.3 0.2" density="2"/>
+      <geom name="key_handle_geom3" type="box" fromto=".1 .2 0 .2 .7 .2" size="0.1 0.7 0.2" density="2"/>
+      <geom name="key_handle_geom4" type="box" fromto="0 .6 .2 .1 .7 .2" size="0.1 0.1 0.2" density="2"/> -->
+      <geom name="key_handle_geom1" type="box" pos=".1 .3 .2" size="0.1 0.3 0.2" density="2"/>
+      <geom name="key_handle_geom2" type="box" pos=".5 .3 .2" size="0.1 0.3 0.2" density="2"/>
+      <geom name="key_handle_geom3" type="box" pos=".3 .9 .2" size="0.1 0.5 0.2" density="2"/>
+      <geom name="key_handle_geom4" type="box" pos=".3 .1 .2" size="0.1 0.1 0.2" density="2"/>
+      <geom name="key_nib1" type="box" pos=".1 .9 .2" size="0.1 0.1 0.2" density="2"/>
+      <geom name="key_nib2" type="box" pos=".1 1.3 .2" size="0.1 0.1 0.2" density="2"/>
     </body>
   </worldbody>
 </mujoco>

@@ -6,28 +6,20 @@ import mujoco
 from abstractcontrol.color import getColorRGBA
 from abstractcontrol.grabbable_entity import GrabbableEntity
 
-class KeyEntity(GrabbableEntity):
-    """A key Entity which attaches to agent model and can unlock doors."""
+class BoxEntity(GrabbableEntity):
+    """A box Entity which can be grabbed."""
     def _build(self, grabber, color):
 
         self.color = color
         rgba = getColorRGBA(color)
 
-        self.model = mjcf.from_path('abstractcontrol/key.xml')
+        self.model = mjcf.from_path('abstractcontrol/box.xml')
 
-        offset = np.array([1.4/2, 1.4/2, 0])
-        # self.key_box = self.model.find('geom', 'key_handle_geom1')
-        for geom in self.model.find_all('geom'):
-            pos = geom.pos
-            size = geom.size
-            geom.set_attributes(pos=(pos-offset)/2, size=size/2, rgba=rgba)
+        box_body = self.model.find('body', 'box_body')
+        box_geom = self.model.find('geom', 'box_geom')
+        box_geom.set_attributes(rgba=rgba)
 
-        key_body = self.model.find('body', 'key_body')
-        # key_body.set_attributes(pos=[-1.4/2, -1.4/2, 0])
-        print('')
-        # self.key_box_geom = self.model.find('geom', 'key_box_geom')
-        # self.key_box_geom.set_attributes(rgba=rgba)
-        super()._build(grabber, key_body)
+        super()._build(grabber, box_body)
 
     @property
     def mjcf_model(self):

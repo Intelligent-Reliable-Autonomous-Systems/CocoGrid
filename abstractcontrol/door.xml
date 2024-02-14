@@ -25,7 +25,7 @@
     <body name="lock_base" pos="0 -1 0">
       <joint name="lock_slide" type="slide" axis="1 0 0" />
       <body name="lock_body">
-        <geom name="lock_front_geom" type="box" size="0.07 1 1.45" pos="0.2 0.96 1.5"/>
+        <geom name="lock_front_geom" type="box" size="0.07 1 1.45" pos="0.2 0.96 1.5" density="10000"/>
       </body>
     </body>
     <!-- <body pos="0 0 0.6" quat="1 0 0 -1" name="head_body">
