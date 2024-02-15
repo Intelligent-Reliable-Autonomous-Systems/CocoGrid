@@ -5,42 +5,47 @@ import numpy as np
 from abstractcontrol.color import getColorRGBA
 
 class DoorEntity(composer.Entity):
+    OPEN_ANGLE = np.pi / 4
+
     """A button Entity which changes colour when pressed with certain force."""
     def _build(self, color=None, is_locked=False, xy_scale=1, z_height=2):
         self.color = color
         rgba = getColorRGBA(color)
-        self.is_locked = is_locked
+        self._is_locked = is_locked
+        self._is_open = False
         self.default_is_locked = is_locked
 
-        self.model = mjcf.from_path('abstractcontrol/door.xml')
+        self._mjcf_model = mjcf.from_path('abstractcontrol/door.xml')
         # test = mjcf.RootElement()
         base_scale = 0.45
 
-        hinge_base_body = self.model.find('body', 'hinge_base')
+        hinge_base_body = self._mjcf_model.find('body', 'hinge_base')
         hinge_base_body.set_attributes(pos=[0, -0.85 * base_scale * xy_scale, 0])
         
-        hinge_base_geom = self.model.find('geom','hinge_base_geom')
+        hinge_base_geom = self._mjcf_model.find('geom','hinge_base_geom')
         hinge_base_geom.set_attributes(size=[0.1*xy_scale], rgba=rgba)
 
-        hinge_column_geom = self.model.find('geom','hinge_column_geom')
+        hinge_column_geom = self._mjcf_model.find('geom','hinge_column_geom')
         hinge_column_geom.set_attributes(size=[0.1*xy_scale], 
                                          fromto=[0, 0, 0, 0, 0, z_height],
                                          rgba=rgba)
         
-        door_body = self.model.find('body','door')
+        door_body = self._mjcf_model.find('body','door')
         door_body.set_attributes(pos=[0, 0.8 * base_scale * xy_scale, z_height / 2])
 
-        door_geom = self.model.find('geom','door_geom')
+        door_geom = self._mjcf_model.find('geom','door_geom')
         door_geom.set_attributes(size=[0.1*xy_scale, 0.8 * base_scale * xy_scale, 0.48*z_height], rgba=rgba)
 
-        lock_body = self.model.find('body', 'lock_base')
+        lock_body = self._mjcf_model.find('body', 'lock_base')
         lock_body.set_attributes(pos=[0, -base_scale * xy_scale, 0])
 
-        lock_front_geom = self.model.find('geom','lock_front_geom')
+        lock_front_geom = self._mjcf_model.find('geom','lock_front_geom')
         lock_front_geom.set_attributes(size=[0.05*xy_scale, base_scale * xy_scale, 0.48*z_height], 
                                        rgba=rgba, pos=[0.5 * base_scale * xy_scale, 0.96 * base_scale * xy_scale, z_height / 2])
         
-        self._lock_slide = self.model.find('joint', 'lock_slide')
+        self._door_hinge = self._mjcf_model.find('joint', 'door_hinge')
+        
+        self._lock_slide = self._mjcf_model.find('joint', 'lock_slide')
 
         if not is_locked:
             lock_body.remove()
@@ -68,7 +73,7 @@ class DoorEntity(composer.Entity):
     def before_step(self, physics, random_state):
         # key_joints = physics.bind(self._root_joints)
         # key_joints.qvel += np.array([0, 0.1, 0])
-        if self.is_locked:
+        if self._is_locked:
             physics.bind(self._lock_slide).qpos = np.array([0])
             door_pos = self.get_pose(physics)[0].base
             for key in self._keys:
@@ -78,17 +83,28 @@ class DoorEntity(composer.Entity):
                 diff[2] = 0
                 if np.linalg.norm(diff) < 1:
                     print("The key is in range!")
-                    self.is_locked = False
+                    self._is_locked = False
                     # self.model.find('geom','lock_front_geom').remove()
                     physics.bind(self._lock_slide).qpos = np.array([-100])
                     break
 
+        hinge_angle = physics.bind(self._door_hinge).qpos[0]
+        self._is_open = np.abs(hinge_angle) >= DoorEntity.OPEN_ANGLE
+
         return super().before_step(physics, random_state)
     
     def reset(self):
-        self.is_locked = self.default_is_locked
+        self._is_locked = self.default_is_locked
         self._keys = []
 
     @property
     def mjcf_model(self):
-        return self.model
+        return self._mjcf_model
+    
+    @property
+    def is_open(self):
+        return self._is_open
+
+    @property
+    def is_locked(self):
+        return self._is_locked

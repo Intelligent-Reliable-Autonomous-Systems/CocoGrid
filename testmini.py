@@ -27,81 +27,18 @@ wall_textures = labmaze_textures.WallTextures(style='style_01')
 floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
-highEnv = gymnasium.make("MiniGrid-FourRooms-v0")
+# highEnv = gymnasium.make("MiniGrid-LavaCrossingS11N5-v0")
 # highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
-# highEnv = gymnasium.make("MiniGrid-Playground-v0")
+highEnv = gymnasium.make("MiniGrid-Playground-v0")
 highEnv.reset()
-
-# print(highEnv.unwrapped.grid.grid)
-gridStr = str(highEnv.unwrapped)
-
-key = {
-  'W': '*',
-  '^': labdefaults.SPAWN_TOKEN,
-  '>': labdefaults.SPAWN_TOKEN,
-  '<': labdefaults.SPAWN_TOKEN,
-  'V': labdefaults.SPAWN_TOKEN,
-  'A': labdefaults.OBJECT_TOKEN
-}
-wallEntities = [
-    ''.join([ key[c] if c in key else c for c in row[::2]])
-    for row in gridStr.split('\n')
-]
-# print(labdefaults.SPAWN_TOKEN)
-labmazeStr = '\n'.join(wallEntities) + '\n'
-maze = labmaze.FixedMazeWithRandomGoals(labmazeStr)
-# print(maze.entity_layer)
-# highEnv.pprint_grid()
-# print([method_name for method_name in dir(highEnv.unwrapped)
-#                   if callable(getattr(highEnv.unwrapped, method_name))])
-
-# highEnv.unwrapped.pprint_grid()
 
 # print(dir(type(highEnv.unwrapped).__bases__[0]))
 # walker = cmu_humanoid.CMUHumanoidPositionControlledV2020(
 #     observable_options={'egocentric_camera': dict(enabled=True)})
 walker = jumping_ball.RollingBallWithHead()
 
-# arena = mazes.MazeWithTargets(
-#     maze=maze,
-#     xy_scale=1,
-#     skybox_texture=skybox_texture,
-#     wall_textures=wall_textures,
-#     floor_textures=floor_textures)
-# arena._find_spawn_and_target_positions()
-# print(arena.find_token_grid_positions([labdefaults.SPAWN_TOKEN]))
-# print(arena.target_positions)
-
-# arena = corridor_arenas.WallsCorridor(
-#     wall_gap=3.,
-#     wall_width=distributions.Uniform(2., 3.),
-#     wall_height=distributions.Uniform(2.5, 3.5),
-#     corridor_width=4.,
-#     corridor_length=30.,
-# )
-# arena = mazes.RandomMazeWithTargets(
-#     x_cells=11,
-#     y_cells=11,
-#     xy_scale=3,
-#     max_rooms=4,
-#     room_min_size=4,
-#     room_max_size=5,
-#     spawns_per_room=1,
-#     targets_per_room=3,
-#     skybox_texture=skybox_texture,
-#     wall_textures=wall_textures,
-#     floor_textures=floor_textures)
 arena = MinimujoArena(highEnv.unwrapped, xy_scale=1)
 
-# task = corridor_tasks.RunThroughCorridor(
-#     walker=walker,
-#     arena=arena,
-#     walker_spawn_position=(0.5, 0, 0),
-#     target_velocity=3.0,
-#     physics_timestep=0.005,
-#     control_timestep=0.03,
-# )
-# task = random_goal_maze.RepeatSingleGoalMaze(
 task = MinimujoTask(
   walker=walker,
   minimujo_arena=arena,
@@ -132,7 +69,6 @@ env.reset()
 
 print(env.action_spec())
 
-# import keyboard
 import glfw
 
 def policy(time):

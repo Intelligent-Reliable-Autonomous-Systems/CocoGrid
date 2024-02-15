@@ -21,6 +21,8 @@ class Grabber(composer.Entity):
         self.grab_control = self.model.actuator.add('general', name="grab", joint="grab", ctrlrange=[0, 1], ctrllimited=True, gear="30")
 
         self.current_object = None
+        self.candidate_object = None
+        self.candidate_dist = np.inf
 
     @property
     def mjcf_model(self):
@@ -35,19 +37,27 @@ class Grabber(composer.Entity):
     def is_being_grabbed(self, object_entity, physics):
         if not self.is_using_grab(physics):
             self.current_object = None
+            self.candidate_object = None
             return False
         if self.current_object is not None and object_entity is not self.current_object:
             return False
+        if object_entity is self.candidate_object:
+            self.current_object = self.candidate_object
+            self.candidate_object = None
+            self.candidate_dist = np.inf
         obj_pos = physics.bind(object_entity.root_joints).qpos.base
         walker_pos = physics.bind(self.walker.root_body).xpos
         dist = np.linalg.norm(obj_pos - walker_pos)
         if self.current_object is None:
-            if dist < self.max_grab_init_dist:
-                self.current_object = object_entity
-                return True
+            if dist < self.max_grab_init_dist and dist < self.candidate_dist:
+                self.candidate_object = object_entity
+                self.candidate_dist = dist
             return False
         else:
-            return dist < self.max_grab_dist
+            if dist < self.max_grab_dist:
+                return True
+            self.current_object = None
+            return False
 
         
     

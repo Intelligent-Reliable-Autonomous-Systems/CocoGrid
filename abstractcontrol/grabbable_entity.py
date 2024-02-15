@@ -11,10 +11,20 @@ class GrabbableEntity(composer.Entity):
         self._grabber = grabber
         self._root_joints = None
         self.body_id = body_id
+        self._is_grabbed = False
+        self._position = np.array([0,0,0])
     
     @property
     def root_joints(self):
         return self._root_joints
+    
+    @property
+    def is_grabbed(self):
+        return self._is_grabbed
+    
+    @property
+    def position(self):
+        return self._position
     
     def create_root_joints(self, attachment_frame):
         root_class = self.model.find('default', 'root')
@@ -36,8 +46,9 @@ class GrabbableEntity(composer.Entity):
     def before_substep(self, physics, random_state):
         # Reacts to grabber magnet using external force
         physics.named.data.xfrc_applied[self.body_id.full_identifier] = np.array([0,0,0,0,0,0], dtype=np.float64)
-        if self._grabber.is_being_grabbed(self, physics):
-            key_pos = physics.bind(self._root_joints).qpos.base
-            physics.named.data.xfrc_applied[self.body_id.full_identifier] = self._grabber.get_magnet_force(key_pos, physics)
+        self._position = physics.bind(self._root_joints).qpos.base
+        self._is_grabbed = self._grabber.is_being_grabbed(self, physics)
+        if self._is_grabbed:
+            physics.named.data.xfrc_applied[self.body_id.full_identifier] = self._grabber.get_magnet_force(self._position, physics)
 
         return super().before_substep(physics, random_state)

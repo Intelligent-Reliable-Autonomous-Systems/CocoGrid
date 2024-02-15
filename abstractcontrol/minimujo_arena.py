@@ -8,9 +8,10 @@ from labmaze import defaults as labdefaults
 from dm_control.locomotion.arenas import labmaze_textures
 from dm_control.locomotion.arenas import mazes
 
-from minigrid.core.world_object import Door, Key, Ball, Box
+from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Lava, Wall
 from abstractcontrol.ball_entity import BallEntity
 from abstractcontrol.box_entity import BoxEntity
+from abstractcontrol.contact_tile_entity import ContactTileEntity
 
 
 from abstractcontrol.door_entity import DoorEntity
@@ -46,23 +47,34 @@ class MinimujoArena(mazes.MazeWithTargets):
 
         self._minigrid = minigrid.unwrapped
 
-        gridStr = str(self._minigrid)
+        # gridStr = str(self._minigrid)
 
-        key = {
-        'W': '*',
-        '^': labdefaults.SPAWN_TOKEN,
-        '>': labdefaults.SPAWN_TOKEN,
-        '<': labdefaults.SPAWN_TOKEN,
-        'V': labdefaults.SPAWN_TOKEN,
-        'A': labdefaults.OBJECT_TOKEN
-        }
-        charMatrix = [
-            [ key[c] if c in key else c for c in row[::2]]
-            for row in gridStr.split('\n')
-        ]
+        # key = {
+        #     'W': '*',
+        #     '^': labdefaults.SPAWN_TOKEN,
+        #     '>': labdefaults.SPAWN_TOKEN,
+        #     '<': labdefaults.SPAWN_TOKEN,
+        #     'V': labdefaults.SPAWN_TOKEN,
+        #     'A': labdefaults.OBJECT_TOKEN,
+        #     'P': 'L'
+        # }
+        # charMatrix = [
+        #     [ key[c] if c in key else c for c in row[::2]]
+        #     for row in gridStr.split('\n')
+        # ]
 
-        labmazeStr = '\n'.join([''.join(row) for row in charMatrix]) + '\n'
-        self._labmaze = labmaze.FixedMazeWithRandomGoals(labmazeStr)
+        # labmazeStr = '\n'.join([''.join(row) for row in charMatrix]) + '\n'
+
+        maze_width = self._minigrid.grid.width
+        maze_height = self._minigrid.grid.height
+        walls = ['*' if type(s) is Wall else ' ' for s in self._minigrid.grid.grid]
+        if self._minigrid.agent_pos is not None:
+            c, r = self._minigrid.agent_pos
+            walls[r * maze_width + c] = labdefaults.SPAWN_TOKEN
+        labmaze_matrix = [walls[i:i+maze_width] for i in range(0, len(walls), maze_width)]
+        labmaze_str = '\n'.join([''.join(row) for row in labmaze_matrix]) + '\n'
+
+        self._labmaze = labmaze.FixedMazeWithRandomGoals(labmaze_str)
         print(self._labmaze.entity_layer)
         
         super().__init__(
@@ -85,7 +97,9 @@ class MinimujoArena(mazes.MazeWithTargets):
             Ball: [],
             Box: [],
             Door: [],
-            Key: []
+            Key: [],
+            Goal: [],
+            Lava: []
         }
         width = self._minigrid.grid.width
         for idx, miniObj in enumerate(self._minigrid.grid.grid):
@@ -109,6 +123,12 @@ class MinimujoArena(mazes.MazeWithTargets):
                 elif key is Box:
                     entity = BoxEntity(self._grabber, color=color)
                     entity.create_root_joints(self.attach(entity))
+                elif key is Goal:
+                    entity = ContactTileEntity(color='goal_green', xy_scale=xy_scale)
+                    self.attach(entity)
+                elif key is Lava:
+                    entity = ContactTileEntity(color='orange', xy_scale=xy_scale)
+                    self.attach(entity)
                 else:
                     entity = None
                 self._mini_entity_map[key].append({
@@ -119,7 +139,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                 })
         print(self._mini_entity_map.keys())
 
-        self.getDoorDirections(charMatrix)
+        self.getDoorDirections(labmaze_matrix)
 
     def getDoorDirections(self, charMatrix):
         for door in self._mini_entity_map[Door]:
@@ -146,35 +166,28 @@ class MinimujoArena(mazes.MazeWithTargets):
         for door in self._mini_entity_map[Door]:
             door['entity'].set_pose(physics, position=door['world_pos'], quaternion=door_quats[door['dir']])
             door['entity'].reset()
-            for key in self._mini_entity_map[Key]:
-                door['entity'].register_key(key['entity'])
+            for obj in self._mini_entity_map[Key]:
+                door['entity'].register_key(obj['entity'])
 
-        for key in self._mini_entity_map[Key]:
-            key['entity'].set_pose(physics, position=key['world_pos'])
-
-        for ball in self._mini_entity_map[Ball]:
-            ball['entity'].set_pose(physics, position=ball['world_pos'])
-
-        for box in self._mini_entity_map[Box]:
-            box['entity'].set_pose(physics, position=box['world_pos'])
-            
-
+        for obj_type in self._mini_entity_map.keys():
+            if obj_type is Wall:
+                continue
+            for obj in self._mini_entity_map[obj_type]:
+                if 'entity' not in obj or obj['entity'] is None:
+                    print('no entity', obj)
+                    continue
+                obj['entity'].set_pose(physics, position=obj['world_pos'])        
 
     def initialize_episode_mjcf(self, random_state):
         super().initialize_episode_mjcf(random_state)
-        # self._target_position = self.target_positions[
-        #     random_state.randint(0, len(self.target_positions))]
-        # print(self._target_position, 'targ pos')
-        # mjcf.get_attachment_frame(
-        #     self._target2.mjcf_model).pos = self._target_position
-        # for ball in self._mini_entity_map[Ball]:
-        #     # ball['entity'].set_pose(physics, position=ball['world_pos'])
-        #     mjcf.get_attachment_frame(
-        #         ball['entity']).pos = ball['world_pos']
 
     def register_walker(self, walker):
         self._walker = walker
         self._grabber.register_walker(self._walker)
+        for lava in self._mini_entity_map[Lava]:
+            lava['entity'].register_walker(walker)
+        for goal in self._mini_entity_map[Goal]:
+            goal['entity'].register_walker(walker)
 
 
     
