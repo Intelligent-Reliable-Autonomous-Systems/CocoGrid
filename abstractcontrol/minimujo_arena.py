@@ -3,12 +3,14 @@ from dm_control.locomotion.tasks import random_goal_maze
 from dm_control.locomotion.props import target_sphere
 from dm_control import mjcf
 from dm_control import composer
+from dm_control.composer.observation import observable
 import labmaze
 from labmaze import defaults as labdefaults
 from dm_control.locomotion.arenas import labmaze_textures
 from dm_control.locomotion.arenas import mazes
 
 from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Lava, Wall
+import numpy as np
 from abstractcontrol.ball_entity import BallEntity
 from abstractcontrol.box_entity import BoxEntity
 from abstractcontrol.contact_tile_entity import ContactTileEntity
@@ -17,6 +19,7 @@ from abstractcontrol.contact_tile_entity import ContactTileEntity
 from abstractcontrol.door_entity import DoorEntity
 from abstractcontrol.grabber import Grabber
 from abstractcontrol.key_entity import KeyEntity
+from abstractcontrol.minigrid_manager import MinigridManager
 
 DEFAULT_PHYSICS_TIMESTEP = 0.001
 DEFAULT_CONTROL_TIMESTEP = 0.025
@@ -134,17 +137,22 @@ class MinimujoArena(mazes.MazeWithTargets):
                 self._mini_entity_map[key].append({
                     'entity': entity, 
                     'world_pos': world_pos, 
-                    'mini_pos': (row, col), 
+                    'mini_pos': (col, row), 
                     'mini_obj': miniObj
                 })
         print(self._mini_entity_map.keys())
 
         self.getDoorDirections(labmaze_matrix)
 
+        self._walker_position = np.array([0,0,0])
+        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map)
+        self._terminated = False
+        self._extrinsic_reward = 0
+
     def getDoorDirections(self, charMatrix):
         for door in self._mini_entity_map[Door]:
             dir = 0
-            r, c = door['mini_pos']
+            c, r = door['mini_pos']
             if r - 1 >= 0 and charMatrix[r-1][c] == '*':
                 dir = 0
             elif r + 1 < len(charMatrix[0]) and charMatrix[r-1][c] == '*':
@@ -176,7 +184,10 @@ class MinimujoArena(mazes.MazeWithTargets):
                 if 'entity' not in obj or obj['entity'] is None:
                     print('no entity', obj)
                     continue
-                obj['entity'].set_pose(physics, position=obj['world_pos'])        
+                obj['entity'].set_pose(physics, position=obj['world_pos'])    
+
+        self._terminated = False
+        self._extrinsic_reward = 0    
 
     def initialize_episode_mjcf(self, random_state):
         super().initialize_episode_mjcf(random_state)
@@ -189,6 +200,30 @@ class MinimujoArena(mazes.MazeWithTargets):
         for goal in self._mini_entity_map[Goal]:
             goal['entity'].register_walker(walker)
 
+    def before_step(self, physics, random_state):
+        if self._walker:
+            self._walker_position = physics.bind(self._walker.root_body).xpos
+        if not self._terminated:
+            reward, terminated = self._minigrid_manager.sync_minigrid(self)
+            self._terminated = terminated
+            self._extrinsic_reward += reward
+
+    # def _build_observables(self):
+    #     return MinimujoObservables(self)
+
+    @property
+    def walker_position(self):
+        return self._walker_position
+    
+    @property
+    def walker_grid_position(self):
+        # col, row = self.world_to_grid_positions([self.walker_position])[0]
+        # return int(row + self.xy_scale/2), int(col + self.xy_scale/2)
+        return self.world_to_minigrid_position(self.walker_position)
+    
+    def world_to_minigrid_position(self, position):
+        col, row = self.world_to_grid_positions([position])[0]
+        return int(row + self.xy_scale/2), int(col + self.xy_scale/2)
 
     
     # def _build_observables(self):
@@ -209,3 +244,32 @@ class MinimujoArena(mazes.MazeWithTargets):
     # @property
     # def maze(self):
     #     return self._arena
+
+# class MinimujoObservables(mazes.MazeObservables):
+
+#     @composer.observable
+#     def top_camera_overlay(self):
+#         return observable.MJCFCamera(self._entity.top_camera)
+    
+# class MJCFCameraMinimujoOverlay(observable.MJCFCamera):
+
+#     def __init__(self, minigrid, *args, **kwargs):
+#         self._minigrid = minigrid
+#         super().__init__(*args, **kwargs)
+
+#     def _callable(self, physics):
+#         def get_observation():
+#             pixels = physics.render(
+#                 height=self._height,
+#                 width=self._width,
+#                 camera_id=self._mjcf_element.full_identifier,
+#                 depth=self._depth,
+#                 segmentation=self._segmentation,
+#                 scene_option=self._scene_option,
+#                 render_flag_overrides=self._render_flag_overrides)
+            
+#             self._minigrid.get_full_render()
+#             return np.atleast_3d(pixels)
+
+#         return get_observation
+

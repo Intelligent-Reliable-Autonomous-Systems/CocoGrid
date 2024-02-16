@@ -1,0 +1,165 @@
+from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Lava, Wall
+from minigrid.core.constants import DIR_TO_VEC
+from minigrid.core.actions import Actions
+import numpy as np
+
+from abstractcontrol.grid_wrapper import GridWrapper
+
+class MinigridManager:
+    def __init__(self, minigrid, object_entities):
+        self._minigrid = minigrid
+        self._objects = object_entities
+        self._grid = GridWrapper(self._minigrid.grid)
+        self._minigrid.grid = self._grid
+
+    def sync_minigrid(self, arena):
+        reward = 0
+        terminated = False
+
+        walker_pos = arena.walker_grid_position
+        for door in self._objects[Door]:
+            entity = door['entity']
+            miniobj = door['mini_obj']
+            col, row = door['mini_pos']
+
+            if miniobj.is_locked != entity.is_locked:
+                r, t = self.unlock_door(miniobj, col, row)
+                reward += r
+                terminated = terminated or t
+
+            if miniobj.is_open != entity.is_open:
+                r, t = self.toggle_door(miniobj, col, row)
+                reward += r
+                terminated = terminated or t
+
+        for ball in self._objects[Ball]:
+            r, t = self.handle_grabbable(ball, arena)
+            reward += r
+            terminated = terminated or t
+
+        for box in self._objects[Box]:
+            r, t = self.handle_grabbable(box, arena)
+            reward += r
+            terminated = terminated or t
+
+        for key in self._objects[Key]:
+            r, t = self.handle_grabbable(key, arena)
+            reward += r
+            terminated = terminated or t
+
+        if not (self._minigrid.agent_pos[0] == walker_pos[0] and self._minigrid.agent_pos[1] == walker_pos[1]):
+            r, t = self.move_agent(*walker_pos)
+            reward += r
+            terminated = terminated or t
+            print(str(self._minigrid))
+
+        for goal in self._objects[Goal]:
+            entity = goal['entity']
+            miniobj = goal['mini_obj']
+            col, row = goal['mini_pos']
+            if walker_pos[0] == col and walker_pos[1] == row:
+                reward += 1
+                terminated = True
+
+        return reward > 0, terminated
+
+    def handle_grabbable(self, grabbable, arena):
+        reward, terminated = (0, False)
+
+        entity = grabbable['entity']
+        miniobj = grabbable['mini_obj']
+        mg_col, mg_row = grabbable['mini_pos']
+        entity_col, entity_row = arena.world_to_minigrid_position(entity.position) if not entity.is_grabbed else (-1, -1)
+        if entity_col < -1 or entity_row < -1:
+            return reward, terminated
+
+        if self._minigrid.carrying == miniobj and not entity.is_grabbed:
+            # Need to drop object
+            reward, terminated = self.drop_object(miniobj, entity_col, entity_row)
+            grabbable['mini_pos'] = entity_col, entity_row
+            return reward, terminated
+
+        if not (mg_col == entity_col and mg_row == entity_row):
+            if entity_col > -1 and entity_row > -1:
+                self.intervene_object_position(miniobj, mg_col, mg_row, entity_col, entity_row)
+                grabbable['mini_pos'] = entity_col, entity_row
+
+        if self._minigrid.carrying != miniobj and entity.is_grabbed:
+            # Need to pickup object
+            r, t = self.pickup_object(miniobj, mg_col, mg_row)
+            grabbable['mini_pos'] = (-1, -1)
+            reward += r
+            terminated = terminated or t
+
+        return reward, terminated
+                
+    def unlock_door(self, miniobj, col, row):
+        with Intervener(self._minigrid, col, row) as intervener:
+            self._grid.set_priority(col, row, miniobj)
+            _, reward, terminated, _, _ = self._minigrid.step(Actions.toggle)
+            self._grid.clear_priority()
+        return reward, terminated
+
+    def toggle_door(self, miniobj, col, row):
+        with Intervener(self._minigrid, col, row) as intervener:
+            self._grid.set_priority(col, row, miniobj)
+            _, reward, terminated, _, _ = self._minigrid.step(Actions.toggle)
+            self._grid.clear_priority()
+        return reward, terminated
+
+    def intervene_object_position(self, miniobj, from_col, from_row, to_col, to_row):
+        self._grid.set_priority(from_col, from_row, miniobj)
+        self._grid.set(from_col, from_row, None)
+        self._grid.clear_priority()
+        # self._grid.set_priority(to_col, to_row, miniobj)
+        self._grid.set(to_col, to_row, miniobj)
+        miniobj.cur_pos = (to_col, to_row)
+
+    def pickup_object(self, miniobj, from_col, from_row):
+        with Intervener(self._minigrid, from_col, from_row) as intervener:
+            # target_cell = self._grid.get(from_row, from_col)
+            # if target_cell is not miniobj:
+            #     # Make the grid wrapper return None rather than a cell that would block the movement.
+            #     self._grid.queue_mock_cell(miniobj)
+            self._grid.set_priority(from_col, from_row, miniobj)
+            _, reward, terminated, _, _ = self._minigrid.step(Actions.pickup)
+            self._grid.clear_priority()
+        return reward, terminated
+
+    def drop_object(self, miniobj, to_col, to_row):
+        with Intervener(self._minigrid, to_col, to_row) as intervener:
+            # target_cell = self._grid.get(to_col, to_row)
+            # if target_cell is not None:
+            #     # Make the grid wrapper return None rather than a cell that would block the drop.
+            #     self._grid.queue_mock_cell(None)
+            self._grid.set_priority(to_col, to_row, None)
+            _, reward, terminated, _, _ = self._minigrid.step(Actions.drop)
+            self._grid.clear_priority()
+        return reward, terminated
+
+    def move_agent(self, to_col, to_row):
+        with Intervener(self._minigrid, to_col, to_row) as intervener:
+            # target_cell = self._grid.get(to_col, to_row)
+            # if target_cell is not None and not target_cell.can_overlap():
+            #     # Make the grid wrapper return None rather than a cell that would block the movement.
+            #     self._grid.queue_mock_cell(None)
+            self._grid.set_priority(to_col, to_row, None)
+            _, reward, terminated, _, _ = self._minigrid.step(Actions.forward)
+            self._grid.clear_priority()
+        return reward, terminated
+
+class Intervener:
+    def __init__(self, minigrid, fwd_col, fwd_row):
+        self._minigrid = minigrid
+        self._fwd_pos = np.array([fwd_col, fwd_row])
+        self._dir = 0
+        self._dir_to_vec_value = None
+    
+    def __enter__(self):
+        diff_vector = self._fwd_pos - self._minigrid.agent_pos
+        self._dir = self._minigrid.agent_dir
+        self._dir_to_vec_value = DIR_TO_VEC[self._dir]
+        DIR_TO_VEC[self._dir] = diff_vector
+
+    def __exit__(self, *args):
+        DIR_TO_VEC[self._dir] = self._dir_to_vec_value

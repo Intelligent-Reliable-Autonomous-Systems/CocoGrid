@@ -73,6 +73,8 @@ class MinimujoTask(composer.Task):
 
         self._task_observables = collections.OrderedDict({})
 
+        self._cum_reward = 0
+
     @property
     def task_observables(self):
         return self._task_observables
@@ -147,6 +149,8 @@ class MinimujoTask(composer.Task):
             physics.bind(walker_nonfoot_geoms).element_id)
         self._ground_geomids = set(
             physics.bind(self._minimujo_arena.ground_geoms).element_id)
+        
+        self._cum_reward = 0
 
     def _is_disallowed_contact(self, contact):
         set1, set2 = self._walker_nonfoot_geomids, self._ground_geomids
@@ -162,17 +166,20 @@ class MinimujoTask(composer.Task):
                     break
 
     def should_terminate_episode(self, physics):
-        if self._walker.aliveness(physics) < self._aliveness_threshold:
-            self._failure_termination = True
-        if self._failure_termination:
+        # if self._walker.aliveness(physics) < self._aliveness_threshold:
+        #     self._failure_termination = True
+        if self._minimujo_arena._terminated:
             self._discount = 0.0
+            print('cumulative reward', self._cum_reward)
             return True
         else:
             return False
 
     def get_reward(self, physics):
         del physics
-        return self._aliveness_reward
+        reward = -1 * (self._minimujo_arena._extrinsic_reward <= 0)
+        self._cum_reward += reward
+        return reward
 
     def get_discount(self, physics):
         del physics

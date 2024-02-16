@@ -6,13 +6,14 @@ import mujoco
 from abstractcontrol.color import getColorRGBA
 
 class GrabbableEntity(composer.Entity):
+
     """A key Entity which attaches to agent model and can unlock doors."""
     def _build(self, grabber, body_id):
         self._grabber = grabber
         self._root_joints = None
         self.body_id = body_id
         self._is_grabbed = False
-        self._position = np.array([0,0,0])
+        self._position = np.array([-10000,-10000,0])
     
     @property
     def root_joints(self):
@@ -25,6 +26,10 @@ class GrabbableEntity(composer.Entity):
     @property
     def position(self):
         return self._position
+    
+    # @property
+    # def grid_position(self):
+    #     return tuple(self._position[:2]) if not self.is_grabbed else GrabbableEntity.GRABBED_POSITION
     
     def create_root_joints(self, attachment_frame):
         root_class = self.model.find('default', 'root')

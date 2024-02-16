@@ -28,8 +28,8 @@ floor_textures = labmaze_textures.FloorTextures(style='style_01')
 
 
 # highEnv = gymnasium.make("MiniGrid-LavaCrossingS11N5-v0")
-# highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
-highEnv = gymnasium.make("MiniGrid-Playground-v0")
+highEnv = gymnasium.make("MiniGrid-KeyCorridorS6R3-v0")
+# highEnv = gymnasium.make("MiniGrid-Playground-v0")
 highEnv.reset()
 
 # print(dir(type(highEnv.unwrapped).__bases__[0]))
