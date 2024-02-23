@@ -1,3 +1,5 @@
+import logging
+
 COLOR_MAP = {
     'red': [1, 0, 0, 1],
     'green': [0, 1, 0, 1],
@@ -11,13 +13,13 @@ COLOR_MAP = {
 
 DEFAULT_GREY = [0.2, 0.2, 0.2, 1]
 
-def getColorRGBA(color):
+def get_color_rgba(color):
     if color in COLOR_MAP:
         return COLOR_MAP[color]
-    print('INVALID COLOR', color)
+    logging.warn('INVALID COLOR', color)
     return DEFAULT_GREY
 
-def getLightVariation(rgba):
+def get_light_variation(rgba):
     new_rgba = rgba.copy()
     for i in range(3):
         new_rgba[i] = min(1, rgba[i] * 1.2)

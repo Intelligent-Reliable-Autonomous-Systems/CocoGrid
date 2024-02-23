@@ -1,21 +1,21 @@
+import os
+
 from dm_control import composer
 from dm_control import mjcf
 import numpy as np
-import mujoco
-from dm_control.composer.observation import observable
 
-from abstractcontrol.color import getColorRGBA, getLightVariation
-from abstractcontrol.grabbable_entity import GrabbableEntity
+from minimujo.color import get_color_rgba, get_light_variation
 
 class ContactTileEntity(composer.Entity):
     """A ball Entity which can be grabbed."""
     def _build(self, color, xy_scale=1):
 
         self.color = color
-        self.rgba = getColorRGBA(color)
-        self.light_rgba = getLightVariation(self.rgba)
+        self.rgba = get_color_rgba(color)
+        self.light_rgba = get_light_variation(self.rgba)
 
-        self._model = mjcf.from_path('abstractcontrol/contact_tile.xml')
+        asset_path = os.path.join(os.path.dirname(__file__), 'assets/contact_tile.xml')
+        self._model = mjcf.from_path(asset_path)
 
         self._body = self._model.find('body', 'contact_tile_body')
         self._body.set_attributes(pos=[-xy_scale*0, -xy_scale*0, 0.005])

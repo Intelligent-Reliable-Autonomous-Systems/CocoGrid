@@ -1,9 +1,9 @@
-from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Lava, Wall
-from minigrid.core.constants import DIR_TO_VEC
 from minigrid.core.actions import Actions
+from minigrid.core.constants import DIR_TO_VEC
+from minigrid.core.world_object import Door, Key, Ball, Box, Goal
 import numpy as np
 
-from abstractcontrol.grid_wrapper import GridWrapper
+from minimujo.minigrid.grid_wrapper import GridWrapper
 
 class MinigridManager:
     def __init__(self, minigrid, object_entities):

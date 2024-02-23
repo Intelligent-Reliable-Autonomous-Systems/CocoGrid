@@ -5,7 +5,7 @@ from matplotlib import animation
 import matplotlib.pyplot as plt
 
 
-def display_video(frames, framerate=30):
+def frames_to_video(frames, framerate=30):
     height, width, _ = frames[0].shape
     dpi = 70
     orig_backend = matplotlib.get_backend()

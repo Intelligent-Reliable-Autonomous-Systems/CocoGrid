@@ -1,8 +1,10 @@
+import os
+
 from dm_control import composer
 from dm_control import mjcf
 import numpy as np
 
-from abstractcontrol.color import getColorRGBA
+from minimujo.color import get_color_rgba
 
 class DoorEntity(composer.Entity):
     OPEN_ANGLE = np.pi / 4
@@ -10,13 +12,14 @@ class DoorEntity(composer.Entity):
     """A button Entity which changes colour when pressed with certain force."""
     def _build(self, color=None, is_locked=False, xy_scale=1, z_height=2):
         self.color = color
-        rgba = getColorRGBA(color)
+        rgba = get_color_rgba(color)
         self._is_locked = is_locked
         self._is_open = False
         self.default_is_locked = is_locked
 
-        self._mjcf_model = mjcf.from_path('abstractcontrol/door.xml')
-        # test = mjcf.RootElement()
+        asset_path = os.path.join(os.path.dirname(__file__), 'assets/door.xml')
+        self._mjcf_model = mjcf.from_path(asset_path)
+        
         base_scale = 0.45
 
         hinge_base_body = self._mjcf_model.find('body', 'hinge_base')

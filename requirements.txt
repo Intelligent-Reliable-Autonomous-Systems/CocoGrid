@@ -1,0 +1,3 @@
+dm_control
+minigrid
+git+git://github.com/imgeorgiev/dmc2gymnasium.git

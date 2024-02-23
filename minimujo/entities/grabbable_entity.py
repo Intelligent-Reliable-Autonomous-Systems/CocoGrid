@@ -1,9 +1,5 @@
 from dm_control import composer
-from dm_control import mjcf
 import numpy as np
-import mujoco
-
-from abstractcontrol.color import getColorRGBA
 
 class GrabbableEntity(composer.Entity):
 
@@ -26,10 +22,6 @@ class GrabbableEntity(composer.Entity):
     @property
     def position(self):
         return self._position
-    
-    # @property
-    # def grid_position(self):
-    #     return tuple(self._position[:2]) if not self.is_grabbed else GrabbableEntity.GRABBED_POSITION
     
     def create_root_joints(self, attachment_frame):
         root_class = self.model.find('default', 'root')

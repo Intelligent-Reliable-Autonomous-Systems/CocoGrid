@@ -1,7 +1,6 @@
-import collections
 from dm_control import composer
-import numpy as np
 from dm_control.mujoco.wrapper import mjbindings
+import numpy as np
 
 _NUM_RAYS = 10
 
@@ -62,19 +61,25 @@ class MinimujoTask(composer.Task):
         self.set_timesteps(
             physics_timestep=physics_timestep, control_timestep=control_timestep)
         
-        self._walker.observables.egocentric_camera.height = 64
-        self._walker.observables.egocentric_camera.width = 64
+        # self._walker.observables.egocentric_camera.height = 64
+        # self._walker.observables.egocentric_camera.width = 64
 
-        for observable in (self._walker.observables.proprioception +
-                        self._walker.observables.kinematic_sensors +
-                        self._walker.observables.dynamic_sensors):
-            observable.enabled = True
-        self._walker.observables.egocentric_camera.enabled = True
+        # for observable in (self._walker.observables.proprioception +
+        #                 self._walker.observables.kinematic_sensors +
+        #                 self._walker.observables.dynamic_sensors):
+        #     observable.enabled = True
+        # self._walker.observables.egocentric_camera.enabled = True
 
-        self._task_observables = collections.OrderedDict({})
+        # self._task_observables = collections.OrderedDict({})
+        self._minimujo_arena.observables.get_observable('top_camera').enabled = True
+        self._task_observables = self._minimujo_arena.observables.as_dict()
 
         self._cum_reward = 0
 
+    @property
+    def observables(self):
+        return self._task_observables
+    
     @property
     def task_observables(self):
         return self._task_observables
@@ -184,3 +189,5 @@ class MinimujoTask(composer.Task):
     def get_discount(self, physics):
         del physics
         return self._discount
+    
+    

@@ -1,19 +1,21 @@
-from dm_control import composer
+import os
+
 from dm_control import mjcf
 import numpy as np
-import mujoco
 
-from abstractcontrol.color import getColorRGBA
-from abstractcontrol.grabbable_entity import GrabbableEntity
+from minimujo.color import get_color_rgba
+from minimujo.entities.grabbable_entity import GrabbableEntity
+
 
 class KeyEntity(GrabbableEntity):
     """A key Entity which attaches to agent model and can unlock doors."""
     def _build(self, grabber, color):
 
         self.color = color
-        rgba = getColorRGBA(color)
+        rgba = get_color_rgba(color)
 
-        self.model = mjcf.from_path('abstractcontrol/key.xml')
+        asset_path = os.path.join(os.path.dirname(__file__), 'assets/key.xml')
+        self.model = mjcf.from_path(asset_path)
 
         offset = np.array([1.4/2, 1.4/2, 0])
         # self.key_box = self.model.find('geom', 'key_handle_geom1')

@@ -1,9 +1,7 @@
 from dm_control import composer
 from dm_control import mjcf
-import numpy as np
 import mujoco
-
-from abstractcontrol.color import getColorRGBA
+import numpy as np
 
 class Grabber(composer.Entity):
     """A grabber which has an actuator to read the grab control."""
