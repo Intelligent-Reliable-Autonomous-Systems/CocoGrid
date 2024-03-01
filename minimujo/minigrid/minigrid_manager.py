@@ -51,7 +51,7 @@ class MinigridManager:
             r, t = self.move_agent(*walker_pos)
             reward += r
             terminated = terminated or t
-            print(str(self._minigrid))
+            # print(str(self._minigrid))
 
         for goal in self._objects[Goal]:
             entity = goal['entity']

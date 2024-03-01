@@ -1,5 +1,7 @@
 import math
 
+from dm_control import composer
+from dm_control.composer.observation import observable
 from dm_control.locomotion.arenas import mazes
 import labmaze
 from labmaze import defaults as labdefaults
@@ -15,7 +17,7 @@ from minimujo.grabber import Grabber
 from minimujo.minigrid.minigrid_manager import MinigridManager
 
 class MinimujoArena(mazes.MazeWithTargets):
-    def __init__(self, minigrid, xy_scale=1, z_height=2.0, name='minimujo',
+    def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240, name='minimujo',
             skybox_texture=None, 
             wall_textures=None, 
             floor_textures=None):
@@ -28,6 +30,8 @@ class MinimujoArena(mazes.MazeWithTargets):
         """
 
         self._minigrid = minigrid.unwrapped
+        self.cam_width = cam_width
+        self.cam_height = cam_height
 
         maze_width = self._minigrid.grid.width
         walls = ['*' if type(s) is Wall else ' ' for s in self._minigrid.grid.grid]
@@ -104,6 +108,9 @@ class MinimujoArena(mazes.MazeWithTargets):
         self._terminated = False
         self._extrinsic_reward = 0
 
+    def _build_observables(self):
+        return MinimujoObservables(self, self.cam_width, self.cam_height)
+
     def setDoorDirections(self, charMatrix):
         for door in self._mini_entity_map[Door]:
             dir = 0
@@ -175,3 +182,13 @@ class MinimujoArena(mazes.MazeWithTargets):
         col, row = self.world_to_grid_positions([position])[0]
         return int(row + self.xy_scale/2), int(col + self.xy_scale/2)
     
+class MinimujoObservables(composer.Observables):
+
+  def __init__(self, entity, width=240, height=320):
+    self.width = width
+    self.height = height
+    super().__init__(entity)
+
+  @composer.observable
+  def top_camera(self):
+    return observable.MJCFCamera(self._entity.top_camera, width=self.width, height=self.height)

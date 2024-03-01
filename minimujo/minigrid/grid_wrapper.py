@@ -68,6 +68,13 @@ class GridWrapper(Grid):
         #     return self.overlaps[flat_idx].pop()
         return self.grid[flat_idx]
     
+    def get_all(self, i: int, j: int) -> list[WorldObj]:
+        flat_idx = j * self.width + i
+        return [self.grid[flat_idx], *self.overlaps[flat_idx]]
+    
+    def get_all(self, idx: int) -> list[WorldObj]:
+        return [self.grid[idx], *self.overlaps[idx]]
+    
     # def queue_mock_cell(self, value):
     #     self.mock_queue.append(value)
     #     self.priority = value
