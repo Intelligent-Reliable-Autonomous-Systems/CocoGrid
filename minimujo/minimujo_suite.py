@@ -4,7 +4,7 @@ from dm_control import composer
 from dm_control.locomotion.walkers import cmu_humanoid
 from dm_control.locomotion.walkers import jumping_ball
 from dm_control.utils import containers
-from dmc2gymnasium import DMCGym
+from minimujo.dmc_gym import DMCGym
 import gymnasium
 from gymnasium.envs.registration import registry
 
