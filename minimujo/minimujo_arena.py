@@ -14,7 +14,7 @@ from minimujo.entities.contact_tile_entity import ContactTileEntity
 from minimujo.entities.door_entity import DoorEntity
 from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
-from minimujo.minigrid.minigrid_manager import MinigridManager
+from .minigrid.minigrid_manager import MinigridManager
 
 class MinimujoArena(mazes.MazeWithTargets):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240, name='minimujo',
