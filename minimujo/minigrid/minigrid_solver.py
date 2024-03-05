@@ -5,9 +5,11 @@ from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Wall
 
 class AgentDummy:
 
-    def __init__(self, cur_pos) -> None:
+    def __init__(self, cur_pos, flat_idx) -> None:
         self.cur_pos = cur_pos
         self.color = ''
+        self.flat_idx = flat_idx
+        self.can_pickup = False
 
 
 class MinigridSolver:
@@ -20,7 +22,9 @@ class MinigridSolver:
         if not isinstance(self.grid, GridWrapper):
             self.grid = GridWrapper(self.grid)
             self.minigrid.grid = self.grid
-        self.agent = AgentDummy(self.minigrid.agent_pos)
+        c, r = self.minigrid.agent_pos
+        agent_flat_idx = self.get_flat_idx(r, c)
+        self.agent = AgentDummy(self.minigrid.agent_pos, agent_flat_idx)
 
     def find_connected_distances(self, start_idx):
         to_visit = deque([(start_idx, 0)])
@@ -82,14 +86,80 @@ class MinigridSolver:
                     world_obj.cur_pos = c, r
                     objects.append((self.get_flat_idx(r, c), world_obj))
         all_connections = { obj:self.find_connected_distances(idx) for idx, obj in objects}
+        all_connections[self.agent] = self.find_connected_distances(self.agent.flat_idx)
         return all_connections
+    
+    def get_state_mapping(self, objects, start_pos):
+        start_state = [start_pos, self.minigrid.carrying]
+        state_mapping = {}
+
+        for world_obj in objects:
+            if type(world_obj) is Door and world_obj.is_locked:
+                state_mapping[world_obj] = len(start_state) # index corresponding to locked door state
+                start_state.append(1) # Locked door
+
+        return tuple(start_state), state_mapping
+    
+    def shortest_path_through_world_object_graph(self, graph, start_pos, goal_pos):
+        start_state, state_mapping = self.get_state_mapping(graph.keys(), start_pos)
+
+        STATE_IDX, DIST_IDX, PREV_IDX = 0, 1, 2
+        start_node = (start_state, 0, None) # State, Distance, Previous
+
+        to_visit = deque([start_node])
+        expanded = set(start_state)
+
+        while len(to_visit) > 0:
+            node = to_visit.popleft()
+            state, total_dist, _ = node
+            cur_pos = state[0]
+
+            if state[0] is goal_pos:
+                # return the path and distance
+                path = [state]
+                back_node = node
+                while back_node[PREV_IDX] is not None:
+                    back_node = back_node[PREV_IDX]
+                    path.append(back_node[STATE_IDX])
+                return path, total_dist
+            
+            if cur_pos not in graph:
+                continue
+            for mstate in self.get_state_mutations(state_mapping, state):
+                if mstate not in expanded:
+                    expanded.add(mstate)
+                    to_visit.append((state, total_dist + step_dist, node))
+            for neighbor, step_dist in graph[cur_pos]:
+                next_state = (neighbor, *state[1:])
+                if next_state not in expanded:
+                    expanded.add(next_state)
+                    to_visit.append((next_state, total_dist + step_dist, node))
+
+        return None
+
+    def get_state_mutations(self, state_mapping, state):
+        cur_obj = state[0]
+        mutations = []
+        if cur_obj in state_mapping:
+            idx = state_mapping[cur_obj]
+            cur_val = state[idx]
+            if type(cur_obj) is Door and cur_val > 0:
+                # Unlock door
+                mutations.append(state[:idx] + (0,) + state[idx+1:])
+        if state[1] is not None:
+            # Can drop object
+            mutations.append(state[:1] + (None, ) + state[2:])
+        else:
+            # Pick up object if free hand
+            if cur_obj.can_pickup:
+                mutations.append(state[:1] + (state[0],) + state[2:])
+        return mutations
     
     def get_pretty_obj_name(self, world_obj):
         cls_name = world_obj.__class__.__name__
         color = world_obj.color
         col, row = world_obj.cur_pos if world_obj.cur_pos else ('N', 'A')
         return f'{cls_name}_{color}_{col}_{row}'
-
     
     def to_graphviz(self, connections):
         import pygraphviz as pgv
@@ -133,4 +203,7 @@ if __name__ == "__main__":
     connected = solver.get_all_connections()
     print(str(minigrid_env))
     print(connected)
-    solver.to_graphviz(connected)
+    # solver.to_graphviz(connected)
+    goal_obj = list(connected.keys())[0]
+    solution = solver.shortest_path_through_world_object_graph(connected, solver.agent, goal_obj)
+    print('solution', solution, goal_obj)
