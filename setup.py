@@ -13,11 +13,11 @@ def read(fname):
 VERSION = "0.1"
 BASE_URL = "https://gitlab.engr.oregonstate.edu/jewettje/minimujo"
 INSTALL_REQUIRES = [
-    "dm-control>=1.0.16",
-    "gymnasium>=0.29.1",
-    "labmaze>=1.0.6",
-    "minigrid>=2.3.1",
-    "numpy>=1.26.4"
+    "dm-control",
+    "gymnasium",
+    "labmaze",
+    "minigrid",
+    "numpy"
 ]
 
 setup(
