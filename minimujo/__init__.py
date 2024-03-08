@@ -1,4 +1,7 @@
 import functools
+import os
+
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
 from dm_control.suite import _DOMAINS
 from gymnasium.envs.registration import register
