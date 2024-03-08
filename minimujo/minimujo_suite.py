@@ -25,6 +25,12 @@ def get_minimujo_env(minigrid_id, walker_type, time_limit=20, random=None, envir
     
     environment_kwargs = environment_kwargs or {}
 
+    task_keys = ['observation_type']
+    task_kwargs = {}
+    for key in task_keys:
+        if key in environment_kwargs:
+            task_kwargs[key] = environment_kwargs.pop(key)
+
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
 
     task = MinimujoTask(
@@ -33,6 +39,7 @@ def get_minimujo_env(minigrid_id, walker_type, time_limit=20, random=None, envir
         physics_timestep=0.005,
         control_timestep=0.03,
         contact_termination=False,
+        **task_kwargs
     )
 
     env = composer.Environment(

@@ -54,6 +54,62 @@ def _spec_to_box_v2(spec):
         return Dict(boxes)
     else:
         return next(iter(boxes.values()))
+    
+def _spec_to_box_v3(spec):
+    box_params = {}
+    for s in spec:
+        if type(s) == specs.Array:
+            s_min = np.array(-np.inf)
+            s_max = np.array(np.inf)
+        elif type(s) == specs.BoundedArray:
+            s_min = s.minimum
+            s_max = s.maximum
+        if np.ndim(s_min) == 0:
+            s_min = s_min.item()
+        if np.ndim(s_max) == 0:
+            s_max = s_max.item()
+        box = (s_min, s_max, s.shape, s.dtype)
+        if s.name:
+            box_params[s.name] = box
+    
+    def ensure_shape_n(val, n):
+        val = np.atleast_1d(val)
+        if val.shape[0] == 1:
+            return np.tile(val, n)
+        return val
+    
+    boxes = {}
+    single_dim_min = np.array([])
+    single_dim_max = np.array([])
+    single_dim_dtype = np.int8
+    range_mapping = {}
+    vector_dim = 0
+
+    for name, box in box_params.items():
+        s_min, s_max, shape, dtype = box
+        if len(shape) > 1:
+            boxes[name] = Box(*box)
+            continue
+        elif len(shape) == 0:
+            shape = (1,)
+        n = shape[0]
+        if n == 0:
+            continue
+        s_min = ensure_shape_n(s_min, n)
+        single_dim_min = np.concatenate((single_dim_min, s_min))
+        s_max = ensure_shape_n(s_max, n)
+        single_dim_max = np.concatenate((single_dim_max, s_max))
+        range_mapping[name] = (vector_dim, vector_dim+n)
+        vector_dim += n
+        single_dim_dtype = np.promote_types(single_dim_dtype, dtype)
+         
+    if vector_dim > 0:
+        boxes['walker'] = Box(single_dim_min, single_dim_max, (vector_dim,), single_dim_dtype)
+
+    if len(boxes.keys()) > 1:
+        return Dict(boxes), range_mapping, vector_dim
+    else:
+        return next(iter(boxes.values())), range_mapping, vector_dim
 
 
 # def _spec_to_box(spec):
@@ -63,10 +119,23 @@ def _spec_to_box_v2(spec):
 def _flatten_obs(obs, dtype=np.float32):
     obs_pieces = []
     for v in obs.values():
-        flat = np.array([v]) if np.isscalar(v) else v
+        flat = np.array([v]) if np.ndim(v) == 0 else v
         obs_pieces.append(flat)
     return np.concatenate(obs_pieces, axis=0)
 
+def _flatten_obs_v2(obs, range_mapping, n):
+    obs_copy = { key:val for key, val in obs.items() if np.atleast_1d(val).shape[0] > 0 }
+    if n > 0:
+        vector = np.zeros(n)
+        for key, slice in range_mapping.items():
+            vector[slice[0]:slice[1]] = np.atleast_1d(obs_copy.pop(key))
+        obs_copy['walker'] = vector
+
+    if len(obs_copy.keys()) > 1:
+        return obs_copy
+    else:
+        return next(iter(obs_copy.values()))
+        
 
 class DMCGym(Env):
     metadata = {
@@ -105,7 +174,7 @@ class DMCGym(Env):
         self.render_width = render_width
         self.render_camera_id = render_camera_id
 
-        self._observation_space = _spec_to_box_v2(self._env.observation_spec().values())
+        self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values())
         self._action_space = _spec_to_box([self._env.action_spec()])
 
         # set seed if provided with task_kwargs
@@ -136,7 +205,7 @@ class DMCGym(Env):
             action = action.astype(np.float32)
         assert self._action_space.contains(action)
         timestep = self._env.step(action)
-        observation = _flatten_obs(timestep.observation)
+        observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
         # observation = timestep.observation
         reward = timestep.reward
         termination = False  # we never reach a goal
@@ -153,7 +222,7 @@ class DMCGym(Env):
         if options:
             logging.warn("Currently doing nothing with options={:}".format(options))
         timestep = self._env.reset()
-        observation = _flatten_obs(timestep.observation)
+        observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
         # observation = timestep.observation
         info = {}
         return observation, info

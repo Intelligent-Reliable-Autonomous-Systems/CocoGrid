@@ -1,4 +1,6 @@
+import collections
 from dm_control import composer
+from dm_control.composer.observation import observable as observable_lib
 from dm_control.mujoco.wrapper import mjbindings
 import numpy as np
 
@@ -16,6 +18,7 @@ class MinimujoTask(composer.Task):
     def __init__(self,
                walker,
                minimujo_arena,
+               observation_type='top_camera',
                randomize_spawn_position=True,
                randomize_spawn_rotation=True,
                rotation_bias_factor=0,
@@ -61,18 +64,31 @@ class MinimujoTask(composer.Task):
         self.set_timesteps(
             physics_timestep=physics_timestep, control_timestep=control_timestep)
         
-        # self._walker.observables.egocentric_camera.height = 64
-        # self._walker.observables.egocentric_camera.width = 64
+        self.observation_types = observation_type.split(',')
 
-        # for observable in (self._walker.observables.proprioception +
-        #                 self._walker.observables.kinematic_sensors +
-        #                 self._walker.observables.dynamic_sensors):
-        #     observable.enabled = True
-        # self._walker.observables.egocentric_camera.enabled = True
+        self._task_observables = collections.OrderedDict({})
+        if 'top_camera' in self.observation_types:
+            self._minimujo_arena.observables.get_observable('top_camera').enabled = True
+            self._task_observables.update({'top_camera': self._minimujo_arena.observables.get_observable('top_camera')})
+        if 'pos' in self.observation_types:
+            def get_walker_pos(physics):
+                walker_pos = physics.bind(self._walker.root_body).xpos
+                return walker_pos[:2]
+            absolute_position = observable_lib.Generic(get_walker_pos)
+            absolute_position.enabled = True
 
-        # self._task_observables = collections.OrderedDict({})
-        self._minimujo_arena.observables.get_observable('top_camera').enabled = True
-        self._task_observables = self._minimujo_arena.observables.as_dict()
+            self._task_observables.update({'abs_pos': absolute_position})
+        if 'walker' in self.observation_types:
+            for observable in (self._walker.observables.proprioception +
+                            self._walker.observables.kinematic_sensors +
+                            self._walker.observables.dynamic_sensors):
+                observable.enabled = True
+        if 'egocentric_camera' in self.observation_types:
+            # self._walker.observables.egocentric_camera.height = 64
+            # self._walker.observables.egocentric_camera.width = 64
+            self._walker.observables.egocentric_camera.enabled = True
+        walker_observables = {k:v for k,v in self._walker.observables.as_dict().items() if v.enabled}
+        self._task_observables.update(walker_observables)
 
         self._cum_reward = 0
 
