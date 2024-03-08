@@ -3,25 +3,19 @@ import argparse
 from minimujo import minimujo_suite
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--interactive', '-i', action='store_true', help='Spawns an interactive viewer. Requires GLFW.')
+parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
+parser.add_argument('--gym', '-g', action='store_true', help='Runs HumanRendering with gymnasium.')
+parser.add_argument('--list', '-l', action='store_true', help='Print a list of environment ids')
 parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='The Minimujo environment id')
+parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
 print(long_dash)
-print("Minimujo: Continuous navigation environment\n")
-print("Run dmc_env environments like:")
-print("    import dm_control.suite as suite")
-print("    env = suite.load('minimujo', gym_id, environment_kwargs={...})")
-print("\nOr with gymnasium as:")
-print("    env = gym.make(gym_id, env_params=env_params)")
-# print("\nSuite:")
-# for task_id in minimujo_suite.SUITE.keys():
-#     print(task_id)
-# print(list(minimujo_suite.SUITE.keys()))
 
-print("\nSee more options with `python -m minimujo --help`")
-print(long_dash)
+def ensure_env():
+    if args.env not in minimujo_suite.SUITE.keys():
+        raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
 
 if args.interactive:
     import os
@@ -29,8 +23,7 @@ if args.interactive:
     from dm_control import viewer
     import numpy as np
 
-    if args.env not in minimujo_suite.SUITE.keys():
-        raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
+    ensure_env()
 
     env = suite.load('minimujo', args.env)
 
@@ -56,3 +49,87 @@ if args.interactive:
         return np.array([grab, up, right])
 
     viewer.launch(env, policy=policy)
+
+elif args.gym:
+    import gymnasium as gym
+    from gymnasium.wrappers.human_rendering import HumanRendering
+    import numpy as np
+    from pygame import key
+    import pygame
+
+    ensure_env()
+    
+    env = gym.make(args.env)
+    env.unwrapped.render_width = 480
+    env.unwrapped.render_height = 480
+    env = HumanRendering(env)
+
+    print('Controls: Move with WASD, grab with Space')
+
+    def get_action():
+        keys = key.get_pressed()
+        up = 0
+        right = 0
+        grab = 0
+        if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
+            right += 1
+        if keys[pygame.K_LEFT] or keys[pygame.K_a]:
+            right -= 1
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            up -= 1
+        if keys[pygame.K_UP] or keys[pygame.K_w]:
+            up += 1
+        if keys[pygame.K_n] or keys[pygame.K_SPACE]:
+            grab = 1
+        if keys[pygame.K_ESCAPE]:
+            return None
+        return np.array([grab, -up, right])
+
+    env.reset()
+
+    while True:
+        action = get_action()
+        if action is None:
+            break
+        obs, rew, term, trunc, info = env.step(action)
+        if term or trunc:
+            break
+
+elif args.list:
+    print("\nSuite:")
+    # for task_id in minimujo_suite.SUITE.keys():
+    #     print(task_id)
+    print(list(minimujo_suite.SUITE.keys()))
+
+elif args.detail:
+    import gymnasium as gym
+
+    ensure_env()
+
+    minigrid_env_id = args.env.replace('Minimujo','MiniGrid')
+    minigrid_env = gym.make(minigrid_env_id).unwrapped
+
+    minigrid_env.reset()
+
+    print(f'{args.env} corresponds to MiniGrid environment {minigrid_env_id}\n')
+
+    print(f'Find details at https://minigrid.farama.org/environments/minigrid/{type(minigrid_env).__name__}\n')
+
+    print('Here is a representation of the MiniGrid environment:')
+    print(minigrid_env)
+
+else:
+    print("Minimujo: Continuous navigation environment\n")
+    print("Run dm_env environments like:")
+    print("    import dm_control.suite as suite")
+    print("    env = suite.load('minimujo', minimujo_id, environment_kwargs={...})")
+    print("\nOr with gymnasium as:")
+    print("    env = gym.make(minimujo_id, env_params=env_params)")
+
+    print('\nBrowse MiniGrid environments at https://minigrid.farama.org/environments/minigrid/')
+    print("Simply swap out the 'MiniGrid' for 'Minimujo' (e.g. MiniGrid-Empty-5x5-v0 -> Minimujo-Empty-5x5-v0)")
+    print('Or select one from `python -m minimujo -l`')
+
+    print("\nSee more options with `python -m minimujo --help`")
+
+print(long_dash)
