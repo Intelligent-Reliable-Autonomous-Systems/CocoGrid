@@ -5,9 +5,11 @@ from minimujo import minimujo_suite
 parser = argparse.ArgumentParser()
 parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
 parser.add_argument('--gym', '-g', action='store_true', help='Runs HumanRendering with gymnasium.')
-parser.add_argument('--list', '-l', action='store_true', help='Print a list of environment ids')
-parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='The Minimujo environment id')
-parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment')
+parser.add_argument('--list', '-l', action='store_true', help='Print a list of environment ids.')
+parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='Specifies the Minimujo environment id.')
+parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment.')
+parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
+parser.add_argument('--obs-type', '-o', default='top_camera', help="What type of output should the environment have? Options are 'top_camera', 'walker', 'pos'")
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -117,6 +119,30 @@ elif args.detail:
 
     print('Here is a representation of the MiniGrid environment:')
     print(minigrid_env)
+
+elif args.framerate:
+    import gymnasium as gym
+    import timeit
+
+    N_STEPS = 1000
+    N_TESTS = 10
+    ensure_env()
+    
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type})
+
+    def run_env():
+        print(f'Testing gym env {args.env} with observation_type {args.obs_type} for {N_STEPS} steps')
+        env.reset()
+
+        for _ in range(N_STEPS):
+            action = env.action_space.sample()
+            _, _, term, trunc, _ = env.step(action)
+            if term or trunc:
+                env.reset()
+
+    total_time = timeit.timeit("run_env()", globals=locals(), number=N_TESTS)
+    fps = 1 / (total_time / N_TESTS / N_STEPS)
+    print(f'Average FPS = {fps}')
 
 else:
     print("Minimujo: Continuous navigation environment\n")

@@ -16,7 +16,7 @@ def get_minimujo_env(minigrid_id, walker_type, time_limit=20, random=None, envir
     highEnv.reset()
 
     if walker_type == 'rolling_ball':
-        walker = jumping_ball.RollingBallWithHead()
+        walker = jumping_ball.RollingBallWithHead(initializer=tuple())
     elif walker_type == 'cmu_humanoid':
         walker = cmu_humanoid.CMUHumanoidPositionControlledV2020(
             observable_options={'egocentric_camera': dict(enabled=True)})
