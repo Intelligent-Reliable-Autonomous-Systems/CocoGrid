@@ -180,7 +180,13 @@ class MinimujoArena(mazes.MazeWithTargets):
     
     def world_to_minigrid_position(self, position):
         col, row = self.world_to_grid_positions([position])[0]
+        # col, row are integers in center of tile, so need to round to nearest integer times xy_scale. e.g -.6->1, 1.4->1
         return int(row + self.xy_scale/2), int(col + self.xy_scale/2)
+    
+    def minigrid_to_world_position(self, row, col):
+        position = self.grid_to_world_positions([(row, col)])[0]
+        # returns center position of tile
+        return position
     
 class MinimujoObservables(composer.Observables):
 
