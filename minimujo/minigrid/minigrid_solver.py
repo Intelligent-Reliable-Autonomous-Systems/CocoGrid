@@ -1,7 +1,7 @@
 import minigrid
 from collections import deque
 from minimujo.minigrid.grid_wrapper import GridWrapper
-from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Wall
+from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Wall, Lava
 
 class AgentDummy:
 
@@ -16,6 +16,16 @@ class MinigridSolver:
     object_types = set([Door, Key, Ball, Box, Goal])
     AGENT_KEY = 'agent'
 
+    ACTION_MAP = {
+        'left': 0,
+        'right': 1,
+        'forward': 2,
+        'pickup': 3,
+        'drop': 4,
+        'toggle': 5,
+        'done': 6
+    }
+
     def __init__(self, minigrid) -> None:
         self.minigrid = minigrid
         self.grid = minigrid.grid
@@ -29,6 +39,8 @@ class MinigridSolver:
     def find_connected_distances(self, start_idx):
         to_visit = deque([(start_idx, 0)])
         expanded = set([start_idx])
+        grid_to_from = dict()
+        grid_to_from[start_idx] = start_idx
         connected = []
 
         ag_col, ag_row = self.agent.cur_pos
@@ -36,21 +48,25 @@ class MinigridSolver:
 
         while len(to_visit) > 0:
             search_idx, dist = to_visit.popleft()
-            neighbors = self.get_neighbors(search_idx)
+            grid_dir = self.get_grid_dir(grid_to_from[search_idx], search_idx)
+            neighbors = self.get_neighbors(search_idx, dir=grid_dir)
             for neighbor in neighbors:
                 if neighbor in expanded:
                     continue
                 expanded.add(neighbor)
+                grid_to_from[neighbor] = search_idx
                 if neighbor == agent_pos:
-                    connected.append((self.agent, dist + 1))
+                    path_back = self.get_path_back(grid_to_from, start_idx, neighbor)
+                    connected.append((self.agent, dist + 1, path_back))
                 objects = self.grid.get_all(neighbor)
                 is_blocking = False
                 for world_obj in objects:
                     if type(world_obj) in MinigridSolver.object_types:
-                        connected.append((world_obj, dist + 1))
+                        path_back = self.get_path_back(grid_to_from, start_idx, neighbor)
+                        connected.append((world_obj, dist + 1, path_back))
                         if not world_obj.can_overlap():
                             is_blocking = True
-                    elif isinstance(world_obj, Wall):
+                    elif isinstance(world_obj, Wall) or isinstance(world_obj, Lava):
                         is_blocking = True
                 if not is_blocking:
                     to_visit.append((neighbor, dist + 1))
@@ -61,20 +77,52 @@ class MinigridSolver:
     
     def get_row_col(self, idx):
         return idx // self.grid.width, idx % self.grid.width
+    
+    def get_grid_dir(self, from_idx, to_idx):
+        diff = to_idx - from_idx
+        if diff == 1:
+            # then to_idx is to the right
+            return 0
+        if diff > 1:
+            # to_idx is below
+            return 1
+        if diff == -1:
+            # to_idx is to the left
+            return 2
+        if diff < -1 or diff == 0:
+            # to_idx is above
+            return 3
 
-    def get_neighbors(self, idx):
+    def get_neighbors(self, idx, dir=0):
         width = self.grid.width
         row, col = self.get_row_col(idx)
-        neighbors = []
-        if row - 1 >= 0:
-            neighbors.append(idx-width)
-        if row + 1 < self.grid.height:
-            neighbors.append(idx+width)
-        if col - 1 >= 0:
-            neighbors.append(idx-1)
+        neighbors = [None, None, None, None]
         if col + 1 < width:
-            neighbors.append(idx+1)
-        return neighbors
+            # right
+            neighbors[0] = idx+1
+        if row + 1 < self.grid.height:
+            # down
+            neighbors[1] = idx+width
+        if col - 1 >= 0:
+            # left
+            neighbors[2] = idx-1
+        if row - 1 >= 0:
+            # up
+            neighbors[3] = idx-width
+        # prioritize dir, then adjacent, and lastly the opposite dir
+        prioritized = [neighbors[dir], neighbors[dir-3], neighbors[dir-1], neighbors[dir-2]]
+        return [p for p in prioritized if p is not None]
+    
+    def get_path_back(self, grid_to_from, start_idx, end_idx):
+        idx = end_idx
+        path = [end_idx]
+        while idx != start_idx:
+            idx = grid_to_from[idx]
+            path.append(idx)
+            if len(path) > 1000:
+                print("Path back has cycle")
+                exit()
+        return path
     
     def get_all_connections(self):
         objects = []
@@ -94,66 +142,141 @@ class MinigridSolver:
         state_mapping = {}
 
         for world_obj in objects:
-            if type(world_obj) is Door and world_obj.is_locked:
+            if type(world_obj) is Door and not world_obj.is_open :
                 state_mapping[world_obj] = len(start_state) # index corresponding to locked door state
-                start_state.append(1) # Locked door
+                val = 2 * int(not world_obj.is_open) + int(world_obj.is_locked)
+                start_state.append(val) # Locked door
 
         return tuple(start_state), state_mapping
+    
+    # def filter_world_object_connections(self, current_state, connections):
+    #     if ty
     
     def shortest_path_through_world_object_graph(self, graph, start_pos, goal_pos):
         start_state, state_mapping = self.get_state_mapping(graph.keys(), start_pos)
 
-        STATE_IDX, DIST_IDX, PREV_IDX = 0, 1, 2
-        start_node = (start_state, 0, None) # State, Distance, Previous
+        STATE_IDX, DIST_IDX, PREV_IDX, PATH_IDX = 0, 1, 2, 3
+        start_node = (start_state, 0, None, []) # State, Distance, Previous
 
         to_visit = deque([start_node])
         expanded = set(start_state)
 
         while len(to_visit) > 0:
             node = to_visit.popleft()
-            state, total_dist, _ = node
+            state, total_dist, _, back_path = node
             cur_pos = state[0]
 
             if state[0] is goal_pos:
                 # return the path and distance
-                path = [state]
+                path = [(state, back_path)]
                 back_node = node
                 while back_node[PREV_IDX] is not None:
                     back_node = back_node[PREV_IDX]
-                    path.append(back_node[STATE_IDX])
+                    path.append((back_node[STATE_IDX], back_node[PATH_IDX]))
                 return path, total_dist
             
             if cur_pos not in graph:
                 continue
-            for mstate in self.get_state_mutations(state_mapping, state):
+            for mstate, step_dist, path in self.get_state_mutations(state_mapping, state, graph):
                 if mstate not in expanded:
                     expanded.add(mstate)
-                    to_visit.append((state, total_dist + step_dist, node))
-            for neighbor, step_dist in graph[cur_pos]:
-                next_state = (neighbor, *state[1:])
-                if next_state not in expanded:
-                    expanded.add(next_state)
-                    to_visit.append((next_state, total_dist + step_dist, node))
+                    to_visit.append((mstate, total_dist + step_dist, node, path))
+            # for neighbor, step_dist, path in graph[cur_pos]:
+            #     next_state = (neighbor, *state[1:])
+            #     if next_state not in expanded:
+            #         expanded.add(next_state)
+            #         to_visit.append((next_state, total_dist + step_dist, node, path))
 
         return None
 
-    def get_state_mutations(self, state_mapping, state):
+    def get_state_mutations(self, state_mapping, state, graph):
         cur_obj = state[0]
+        cur_holding = state[1]
         mutations = []
         if cur_obj in state_mapping:
             idx = state_mapping[cur_obj]
             cur_val = state[idx]
-            if type(cur_obj) is Door and cur_val > 0:
-                # Unlock door
-                mutations.append(state[:idx] + (0,) + state[idx+1:])
+            if type(cur_obj) is Door and cur_val > 0: # is closed
+                if cur_val % 2 == 0 or (type(cur_holding) is Key and cur_obj.color == cur_holding.color):
+                    # Can open door if not locked or holding key
+                    new_state = state[:idx] + (0,) + state[idx+1:]
+                    mutations.append((new_state, 1, ['toggle']))
+                # Don't let closed door add other mutations
+                return mutations
         if state[1] is not None:
             # Can drop object
-            mutations.append(state[:1] + (None, ) + state[2:])
+            new_state = state[:1] + (None, ) + state[2:]
+            mutations.append((new_state, 1, ['drop']))
         else:
             # Pick up object if free hand
             if cur_obj.can_pickup:
-                mutations.append(state[:1] + (state[0],) + state[2:])
+                new_state = state[:1] + (state[0],) + state[2:]
+                mutations.append((new_state, 1, ['pickup']))
+        for neighbor, step_dist, path in graph[cur_obj]:
+            next_state = (neighbor, *state[1:])
+            mutations.append((next_state, step_dist, path))
         return mutations
+    
+    def get_actions_from_idx_path(self, path, start_dir):
+        agent_dir = start_dir
+        actions = []
+        for i in range(1,len(path)):
+            from_pos = path[i-1]
+            to_pos = path[i]
+            target_dir = self.get_grid_dir(from_pos, to_pos)
+            turns = [[], ['left'], ['left','left'],['right']]
+            dir_offset = (agent_dir - target_dir + 4) % 4
+            actions.extend(turns[dir_offset])
+            agent_dir = target_dir
+            actions.append('forward')
+        return actions[:-1], agent_dir
+
+    def get_actions_from_solution(self, solution):
+        agent_dir = self.minigrid.agent_dir
+        total_actions = []
+        path_prefix = []
+        for world_object, path in solution[::-1]:
+            world_object = world_object[0]
+            if len(path) < 2:
+                print('short_path', path)
+                total_actions.extend(path)
+                continue
+            partial_actions, agent_dir = self.get_actions_from_idx_path(path_prefix + path[::-1], agent_dir)
+            print(path_prefix + path[::-1])
+            path_prefix = path[1:2]
+            # print(path[::-1], partial_actions, agent_dir, type(world_object))
+            total_actions.extend(partial_actions)
+            # if type(world_object) is Door:
+            #     # print('door state', world_object.is_open)
+            #     if not world_object.is_open:
+            #         # print('toggle')
+            #         total_actions.append('toggle')
+        return total_actions
+    
+    def get_solution_actions(self):
+        c, r = self.minigrid.agent_pos
+        agent_flat_idx = self.get_flat_idx(r, c)
+        self.agent = AgentDummy(self.minigrid.agent_pos, agent_flat_idx)
+
+        connected = self.get_all_connections()
+        # print(str(minigrid_env))
+        # print(connected)
+        # solver.to_graphviz(connected)
+        goal_obj = list(connected.keys())[0]
+        for world_obj in connected.keys():
+            if type(world_obj) is Ball or Goal:
+                print('found goal', world_obj)
+                goal_obj = world_obj
+                break
+
+        solution, total_dist = self.shortest_path_through_world_object_graph(connected, self.agent, goal_obj)
+        actions = self.get_actions_from_solution(solution)
+        if type(goal_obj) is Goal:
+            actions.append('forward')
+        elif type(goal_obj) is Ball:
+            actions.append('pickup')
+        return actions
+
     
     def get_pretty_obj_name(self, world_obj):
         cls_name = world_obj.__class__.__name__
@@ -192,18 +315,31 @@ class MinigridSolver:
     
 if __name__ == "__main__":
     import gymnasium as gym
-    # minigrid_id = "MiniGrid-KeyCorridorS3R2-v0"
-    minigrid_id = "MiniGrid-Playground-v0"
-    minigrid_env = gym.make(minigrid_id).unwrapped
+    minigrid_id = "MiniGrid-ObstructedMaze-2Dl-v0"
+    # minigrid_id = "MiniGrid-Playground-v0"
+    minigrid_env = gym.make(minigrid_id, render_mode='human').unwrapped
     minigrid_env.reset()
     solver = MinigridSolver(minigrid_env)
-    col, row = tuple(minigrid_env.agent_pos)
-    idx = row * solver.grid.width + col
+    # col, row = tuple(minigrid_env.agent_pos)
+    # agent_idx = row * solver.grid.width + col
     # connected = solver.find_connected_distances(idx)
-    connected = solver.get_all_connections()
-    print(str(minigrid_env))
-    print(connected)
-    # solver.to_graphviz(connected)
-    goal_obj = list(connected.keys())[0]
-    solution = solver.shortest_path_through_world_object_graph(connected, solver.agent, goal_obj)
-    print('solution', solution, goal_obj)
+
+    max_steps = 50
+    while max_steps > 0:
+        actions = solver.get_solution_actions()
+        col, row = tuple(minigrid_env.agent_pos)
+        agent_idx = row * solver.grid.width + col
+        print(agent_idx, 'actions', actions)
+        
+        action_id = MinigridSolver.ACTION_MAP[actions[0]]
+        _, _, terminated, truncated, _ = minigrid_env.step(action_id)
+        if truncated:
+            print('Truncated: did not complete environment')
+            break
+        if terminated:
+            print('Terminated: reached terminal state')
+            break
+        max_steps -= 1
+    # for action in actions:
+    #     action_id = MinigridSolver.ACTION_MAP[action]
+    #     minigrid_env.step(action_id)

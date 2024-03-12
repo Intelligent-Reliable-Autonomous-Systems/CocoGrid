@@ -89,16 +89,18 @@ elif args.gym:
 
     env.reset()
 
+    num_steps = 0
     while True:
         action = get_action()
         if action is None:
             break
         obs, rew, term, trunc, info = env.step(action)
+        num_steps += 1
         if term:
-            print('Terminated')
+            print(f'Terminated after {num_steps} steps')
             break
         if trunc:
-            print('Truncated')
+            print(f'Truncated after {num_steps} steps')
             break
 
 elif args.list:
