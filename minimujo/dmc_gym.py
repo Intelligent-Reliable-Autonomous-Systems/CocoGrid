@@ -208,8 +208,8 @@ class DMCGym(Env):
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
         # observation = timestep.observation
         reward = timestep.reward
-        termination = False  # we never reach a goal
-        truncation = timestep.last()
+        termination = self._env._task.should_terminate_episode(self._env._physics_proxy)  # we never reach a goal
+        truncation = timestep.last() and not termination
         info = {"discount": timestep.discount}
         return observation, reward, termination, truncation, info
 

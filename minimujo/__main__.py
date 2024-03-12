@@ -27,7 +27,7 @@ if args.interactive:
 
     ensure_env()
 
-    env = suite.load('minimujo', args.env)
+    env = suite.load('minimujo', args.env, environment_kwargs={'observation_type': args.obs_type})
 
     # os.environ['PYOPENGL_PLATFORM'] = 'glfw'
     os.environ['MUJOCO_GL'] = 'glfw'
@@ -61,7 +61,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env)
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type})
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
@@ -94,7 +94,11 @@ elif args.gym:
         if action is None:
             break
         obs, rew, term, trunc, info = env.step(action)
-        if term or trunc:
+        if term:
+            print('Terminated')
+            break
+        if trunc:
+            print('Truncated')
             break
 
 elif args.list:
@@ -136,7 +140,9 @@ elif args.framerate:
 
         for _ in range(N_STEPS):
             action = env.action_space.sample()
-            _, _, term, trunc, _ = env.step(action)
+            _, reward, term, trunc, _ = env.step(action)
+            if reward is None:
+                print('WARNING: reward returned was None')
             if term or trunc:
                 env.reset()
 
