@@ -191,7 +191,6 @@ class MinimujoTask(composer.Task):
         #     self._failure_termination = True
         if self._minimujo_arena._terminated:
             self._discount = 0.0
-            print('cumulative reward', self._cum_reward)
             return True
         else:
             return False

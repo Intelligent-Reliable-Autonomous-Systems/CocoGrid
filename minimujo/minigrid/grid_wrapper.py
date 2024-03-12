@@ -12,7 +12,7 @@ class GridWrapper(Grid):
         self.mock_queue = []
         self.priority = None
 
-    def set(self, i: int, j: int, v: WorldObj | None):
+    def set(self, i: int, j: int, v: WorldObj):
         assert (
             0 <= i < self.width
         ), f"column index {i} outside of grid of width {self.width}"
@@ -55,7 +55,7 @@ class GridWrapper(Grid):
         # else:
         #     self.overlaps[flat_idx].append(v)
 
-    def get(self, i: int, j: int) -> WorldObj | None:
+    def get(self, i: int, j: int) -> WorldObj:
         assert 0 <= i < self.width
         assert 0 <= j < self.height
         assert self.grid is not None
@@ -68,11 +68,11 @@ class GridWrapper(Grid):
         #     return self.overlaps[flat_idx].pop()
         return self.grid[flat_idx]
     
-    def get_all(self, i: int, j: int) -> list[WorldObj]:
+    def get_all(self, i: int, j: int):
         flat_idx = j * self.width + i
         return [self.grid[flat_idx], *self.overlaps[flat_idx]]
     
-    def get_all(self, idx: int) -> list[WorldObj]:
+    def get_all(self, idx: int):
         return [self.grid[idx], *self.overlaps[idx]]
     
     # def queue_mock_cell(self, value):
