@@ -153,6 +153,7 @@ class DMCGym(Env):
         render_height=64,
         render_width=64,
         render_camera_id=0,
+        track_position=False
     ):
         """TODO comment up"""
 
@@ -167,6 +168,7 @@ class DMCGym(Env):
             task_kwargs,
             environment_kwargs,
         )
+        self.arena = self._env._task._minimujo_arena
 
         # placeholder to allow built in gymnasium rendering
         self.render_mode = "rgb_array"
@@ -183,6 +185,8 @@ class DMCGym(Env):
             self._observation_space.seed(seed)
             self._action_space.seed(seed)
 
+        self.track_position = track_position
+        self.trajectory = []
         self._force_backup_render = False
 
     def __getattr__(self, name):
@@ -213,6 +217,10 @@ class DMCGym(Env):
         termination = self._env._task.should_terminate_episode(self._env._physics_proxy)  # we never reach a goal
         truncation = timestep.last() and not termination
         info = {"discount": timestep.discount}
+
+        if self.track_position:
+            self.trajectory.append(np.array(self.arena.walker_position))
+
         return observation, reward, termination, truncation, info
 
     def reset(self, seed=None, options=None):
@@ -232,30 +240,51 @@ class DMCGym(Env):
     def render(self, height=None, width=None, camera_id=None):
         height = height or self.render_height
         width = width or self.render_width
-        camera_id = camera_id or self.render_camera_id
+
+        grid_width = self.arena._minigrid.grid.width
+        grid_height = self.arena._minigrid.grid.height
         
         if self._force_backup_render:
-            return self._get_backup_image()
-        try:
-            image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
-        except:
-            # if OpenGL is not defined, use a backup rendering
-            self._force_backup_render = True
-            image = self._get_backup_image()
+            image = self._get_backup_image(tile_size=width//grid_width)
+        else:
+            try:
+                camera_id = camera_id or self.render_camera_id
+                image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
+            except:
+                # if OpenGL is not defined, use a backup rendering
+                self._force_backup_render = True
+                image = self._get_backup_image()
+
+        if self.track_position:
+            self._render_trajectory(image, tile_size=width//grid_width)
         return image
 
-    def _get_backup_image(self):
+    def _get_backup_image(self, tile_size):
         # use a modified Minigrid rendering as a backup
-        from minigrid.minigrid_env import TILE_PIXELS
 
         arena = self._env._task._minimujo_arena
         minigrid_env = arena._minigrid
         # render the grid, but without the agent
-        image = minigrid_env.grid.render(tile_size=TILE_PIXELS, agent_pos=(-100,-100), highlight_mask=None)
+        image = minigrid_env.grid.render(tile_size=tile_size, agent_pos=(-100,-100), highlight_mask=None)
         # get the continuous walker position mapped to continuous grid position
         pos = arena.world_to_grid_positions([arena.walker_position])[0]
         # scale walker position and create a white box for the agent
-        x, y = tuple((pos * TILE_PIXELS + TILE_PIXELS/2).astype(int))
-        width = int(TILE_PIXELS * 0.5 * 0.4)
+        x, y = tuple((pos * tile_size + tile_size/2).astype(int))
+        width = int(tile_size * 0.5 * 0.4)
         image[x-width:x+width,y-width:y+width] = 255
         return image
+    
+    def _render_trajectory(self, image, tile_size):
+        # Add some points to the render
+
+        grid_positions = self.arena.world_to_grid_positions(self.trajectory)
+        color1 = np.array([28, 255, 255])
+        color2 = np.array([47, 49, 146])
+        max_points = 40
+        skip = int(max(1, len(grid_positions) / max_points))
+        for idx, pos in enumerate(grid_positions[::-skip]):
+            x, y = tuple((pos * tile_size + tile_size/2).astype(int))
+            width = int(tile_size * 0.5 * 0.1)
+            frac = min(1, idx / max_points)
+            color = (frac * color2 + (1 - frac) * color1).astype(int)
+            image[x-width:x+width,y-width:y+width, :] = color

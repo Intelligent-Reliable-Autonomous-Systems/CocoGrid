@@ -53,8 +53,8 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     )
     return env
 
-def get_gym_env_from_suite(domain, task, time_limit=20, random=None, env_params=None):
-    return DMCGym(domain=domain, task=task, task_kwargs=dict(time_limit=time_limit, random=random), environment_kwargs=env_params, rendering=None)
+def get_gym_env_from_suite(domain, task, time_limit=20, random=None, env_params=None, track_position=False):
+    return DMCGym(domain=domain, task=task, task_kwargs=dict(time_limit=time_limit, random=random), environment_kwargs=env_params, rendering=None, track_position=track_position)
 
 SUITE = containers.TaggedTasks()
 

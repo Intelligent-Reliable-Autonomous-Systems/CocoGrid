@@ -13,6 +13,7 @@ parser.add_argument('--framerate', '-f', action='store_true', help='Measures the
 parser.add_argument('--obs-type', '-o', default='top_camera', help="What type of output should the environment have? Options are 'top_camera', 'walker', 'pos'")
 parser.add_argument('--walker', '-w', default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
+parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -64,7 +65,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'xy_scale': args.scale})
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'xy_scale': args.scale}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
