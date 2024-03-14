@@ -91,6 +91,10 @@ elif args.gym:
 
     num_steps = 0
     while True:
+        keys = key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            print('Manually terminated')
+            break
         action = get_action()
         if action is None:
             break

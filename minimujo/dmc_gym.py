@@ -183,6 +183,8 @@ class DMCGym(Env):
             self._observation_space.seed(seed)
             self._action_space.seed(seed)
 
+        self._force_backup_render = False
+
     def __getattr__(self, name):
         """Add this here so that we can easily access attributes of the underlying env"""
         return getattr(self._env, name)
@@ -231,4 +233,29 @@ class DMCGym(Env):
         height = height or self.render_height
         width = width or self.render_width
         camera_id = camera_id or self.render_camera_id
-        return self._env.physics.render(height=height, width=width, camera_id=camera_id)
+        
+        if self._force_backup_render:
+            return self._get_backup_image()
+        try:
+            image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
+        except:
+            # if OpenGL is not defined, use a backup rendering
+            self._force_backup_render = True
+            image = self._get_backup_image()
+        return image
+
+    def _get_backup_image(self):
+        # use a modified Minigrid rendering as a backup
+        from minigrid.minigrid_env import TILE_PIXELS
+
+        arena = self._env._task._minimujo_arena
+        minigrid_env = arena._minigrid
+        # render the grid, but without the agent
+        image = minigrid_env.grid.render(tile_size=TILE_PIXELS, agent_pos=(-100,-100), highlight_mask=None)
+        # get the continuous walker position mapped to continuous grid position
+        pos = arena.world_to_grid_positions([arena.walker_position])[0]
+        # scale walker position and create a white box for the agent
+        x, y = tuple((pos * TILE_PIXELS + TILE_PIXELS/2).astype(int))
+        width = int(TILE_PIXELS * 0.5 * 0.4)
+        image[x-width:x+width,y-width:y+width] = 255
+        return image
