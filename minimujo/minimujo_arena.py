@@ -75,7 +75,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                 color = miniObj.color
                 world_pos = self.grid_to_world_positions([(row,col)])[0]
                 if key is Door:
-                    entity = DoorEntity(color=color, is_locked=miniObj.is_locked)
+                    entity = DoorEntity(color=color, is_locked=miniObj.is_locked, xy_scale=xy_scale)
                     self.attach(entity)
                 elif key is Key:
                     entity = KeyEntity(self._grabber, color=color)
@@ -180,8 +180,8 @@ class MinimujoArena(mazes.MazeWithTargets):
     
     def world_to_minigrid_position(self, position):
         col, row = self.world_to_grid_positions([position])[0]
-        # col, row are integers in center of tile, so need to round to nearest integer times xy_scale. e.g -.6->1, 1.4->1
-        return int(row + self.xy_scale/2), int(col + self.xy_scale/2)
+        # col, row are integers in center of tile, so need to round to nearest integer. e.g -.6->1, 1.4->1
+        return int(row + 1/2), int(col + 1/2)
     
     def minigrid_to_world_position(self, row, col):
         position = self.grid_to_world_positions([(row, col)])[0]

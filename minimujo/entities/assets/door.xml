@@ -16,9 +16,9 @@
       <geom name="hinge_base_geom" type="cylinder" fromto="0 0 0 0 0 0.02" size="0.08"/>
       <joint name="door_hinge" type="hinge" axis="0 0 1" />
       <body name="hinge_column">
-        <geom name="hinge_column_geom" type="cylinder" fromto="0 0 0 0 0 3" size="0.08" density="2"/>
+        <geom name="hinge_column_geom" type="cylinder" fromto="0 0 0 0 0 3" size="0.08" mass="0.1"/>
         <body name="door" pos="0 0.96 1.5">
-          <geom name="door_geom" type="box" size="0.15 1 1.45" density="2"/>
+          <geom name="door_geom" type="box" size="0.15 1 1.45" mass="0.1"/>
         </body>
       </body>
     </body>

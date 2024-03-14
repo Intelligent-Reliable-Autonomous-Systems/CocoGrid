@@ -73,7 +73,7 @@ class Grabber(composer.Entity):
         mujoco.mju_rotVecQuat(res=walker_facing_vec, vec=np.array([0,1,0], dtype=np.float64), quat=walker_quat)
 
         # targets a spot behind the walker
-        target_pos = walker_pos - self.target_dist * walker_facing_vec
+        target_pos = walker_pos + self.target_dist * walker_facing_vec
 
         xfrc_applied[:3] = (target_pos - pos).base
         xfrc_applied[2] = 0

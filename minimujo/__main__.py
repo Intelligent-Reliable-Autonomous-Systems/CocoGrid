@@ -5,11 +5,14 @@ from minimujo import minimujo_suite
 parser = argparse.ArgumentParser()
 parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
 parser.add_argument('--gym', '-g', action='store_true', help='Runs HumanRendering with gymnasium.')
+parser.add_argument('--minigrid', '-m', action='store_true', help='Run a minigrid environment')
 parser.add_argument('--list', '-l', action='store_true', help='Print a list of environment ids.')
 parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='Specifies the Minimujo environment id.')
 parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment.')
 parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
 parser.add_argument('--obs-type', '-o', default='top_camera', help="What type of output should the environment have? Options are 'top_camera', 'walker', 'pos'")
+parser.add_argument('--walker', '-w', default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
+parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -27,7 +30,7 @@ if args.interactive:
 
     ensure_env()
 
-    env = suite.load('minimujo', args.env, environment_kwargs={'observation_type': args.obs_type})
+    env = suite.load('minimujo', args.env, task_kwargs={'walker_type': args.walker}, environment_kwargs={'observation_type': args.obs_type, 'xy_scale': args.scale})
 
     # os.environ['PYOPENGL_PLATFORM'] = 'glfw'
     os.environ['MUJOCO_GL'] = 'glfw'
@@ -61,7 +64,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type})
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'xy_scale': args.scale})
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
@@ -107,6 +110,23 @@ elif args.gym:
             print(f'Truncated after {num_steps} steps')
             break
 
+elif args.minigrid:
+    import gymnasium as gym
+    from minigrid.manual_control import ManualControl
+
+    env_id = args.env.replace('Minimujo', 'MiniGrid')
+    env = gym.make(
+        env_id,
+        render_mode="human",
+        screen_size=640,
+    )
+
+    manual_control = ManualControl(env)
+    try:
+        manual_control.start()
+    except:
+        print('Manual control terminated.')
+
 elif args.list:
     print("\nSuite:")
     # for task_id in minimujo_suite.SUITE.keys():
@@ -115,6 +135,7 @@ elif args.list:
 
 elif args.detail:
     import gymnasium as gym
+    from minimujo.custom_minigrid import CUSTOM_ENVS
 
     ensure_env()
 
@@ -123,9 +144,12 @@ elif args.detail:
 
     minigrid_env.reset()
 
-    print(f'{args.env} corresponds to MiniGrid environment {minigrid_env_id}\n')
+    if type(minigrid_env) in CUSTOM_ENVS:
+        print(f'{args.env} is a custom environment part of the Minimujo package\n')
+    else:
+        print(f'{args.env} corresponds to MiniGrid environment {minigrid_env_id}\n')
 
-    print(f'Find details at https://minigrid.farama.org/environments/minigrid/{type(minigrid_env).__name__}\n')
+        print(f'Find details at https://minigrid.farama.org/environments/minigrid/{type(minigrid_env).__name__}\n')
 
     print('Here is a representation of the MiniGrid environment:')
     print(minigrid_env)
