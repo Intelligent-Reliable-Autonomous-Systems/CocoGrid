@@ -13,7 +13,7 @@ from minimujo.minimujo_task import MinimujoTask
 
 def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, random=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
-    highEnv.reset()
+    highEnv.reset(seed=random)
 
     environment_kwargs = environment_kwargs or {}
 

@@ -149,6 +149,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                     continue
                 obj['entity'].set_pose(physics, position=obj['world_pos'])    
 
+        self._minigrid_manager.reset()
         self._terminated = False
         self._extrinsic_reward = 0    
 

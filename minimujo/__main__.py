@@ -15,6 +15,7 @@ parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="Wha
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
+parser.add_argument('--seed', type=int, default=None, help='The random seed to be applied')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -32,7 +33,7 @@ if args.interactive:
 
     ensure_env()
 
-    env = suite.load('minimujo', args.env, task_kwargs={'walker_type': args.walker}, environment_kwargs={'observation_type': args.obs_type, 'xy_scale': args.scale})
+    env = suite.load('minimujo', args.env, task_kwargs={'walker_type': args.walker, 'random': args.seed}, environment_kwargs={'observation_type': args.obs_type, 'xy_scale': args.scale})
 
     # os.environ['PYOPENGL_PLATFORM'] = 'glfw'
     os.environ['MUJOCO_GL'] = 'glfw'
@@ -66,7 +67,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale}, track_position=args.track)
+    env = gym.make(args.env, random=args.seed, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
