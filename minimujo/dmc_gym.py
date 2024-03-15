@@ -251,7 +251,6 @@ class DMCGym(Env):
             image = self._get_backup_image(tile_size=width//grid_width)
         else:
             try:
-                raise Exception('gasgasd')
                 camera_id = camera_id or self.render_camera_id
                 image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
             except:
