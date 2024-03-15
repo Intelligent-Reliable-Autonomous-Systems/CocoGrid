@@ -66,7 +66,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale, 'use_subgoal_rewards': True}, track_position=args.track)
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)

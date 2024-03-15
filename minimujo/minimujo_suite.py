@@ -34,6 +34,9 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
         if key in environment_kwargs:
             task_kwargs[key] = environment_kwargs.pop(key)
 
+    if 'reward_type' in task_kwargs and task_kwargs['reward_type'] in ['subgoal', 'subgoal_cost']:
+        environment_kwargs['use_subgoal_rewards'] = True
+
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
 
     task = MinimujoTask(

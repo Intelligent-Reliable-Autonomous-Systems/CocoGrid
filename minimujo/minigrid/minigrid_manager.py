@@ -26,7 +26,6 @@ class MinigridManager:
         if not self._use_subgoal_rewards:
             return 0
         
-        
         current_subgoals = self._current_subgoals
         self._replan_subgoal_count += 1
         if self._replan_subgoal_count > self._replan_subgoal_interval:
