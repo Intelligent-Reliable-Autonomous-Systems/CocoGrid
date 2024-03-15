@@ -10,8 +10,9 @@ parser.add_argument('--list', '-l', action='store_true', help='Print a list of e
 parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='Specifies the Minimujo environment id.')
 parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment.')
 parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
-parser.add_argument('--obs-type', '-o', default='top_camera', help="What type of output should the environment have? Options are 'top_camera', 'walker', 'pos'")
-parser.add_argument('--walker', '-w', default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
+parser.add_argument('--obs-type', '-o', type=str, default='top_camera', help="What type of observation should the environment emit? Options are 'top_camera', 'walker', 'pos'")
+parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="What type of reward should the environment emit? Options are 'sparse', 'sparse_cost', 'subgoal', 'subgoal_cost'")
+parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
 args = parser.parse_args()
@@ -65,7 +66,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'xy_scale': args.scale}, track_position=args.track)
+    env = gym.make(args.env, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale, 'use_subgoal_rewards': True}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)

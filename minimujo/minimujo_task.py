@@ -19,6 +19,7 @@ class MinimujoTask(composer.Task):
                walker,
                minimujo_arena,
                observation_type='top_camera',
+               reward_type='sparse',
                randomize_spawn_position=True,
                randomize_spawn_rotation=True,
                rotation_bias_factor=0,
@@ -91,6 +92,17 @@ class MinimujoTask(composer.Task):
         self._task_observables.update(walker_observables)
 
         self._cum_reward = 0
+
+        reward_func_map = {
+            'sparse': self._sparse_reward,
+            'sparse_cost': self._sparse_cost,
+            'subgoal': self._subgoal_reward,
+            'subgoal_cost': self._subgoal_cost
+        }
+        self.reward_type = reward_type
+        if not reward_type in reward_func_map:
+            raise Exception(f'reward_type {reward_type} must be one of {list(reward_func_map.keys())}')
+        self._reward_func = reward_func_map[reward_type]
 
     @property
     def observables(self):
@@ -172,6 +184,8 @@ class MinimujoTask(composer.Task):
             physics.bind(self._minimujo_arena.ground_geoms).element_id)
         
         self._cum_reward = 0
+        self._subgoal_reward_decay = 0.05
+        self._steps_since_last_subgoal = 0
 
     def _is_disallowed_contact(self, contact):
         set1, set2 = self._walker_nonfoot_geomids, self._ground_geomids
@@ -185,6 +199,7 @@ class MinimujoTask(composer.Task):
                 if self._is_disallowed_contact(c):
                     self._failure_termination = True
                     break
+        self._steps_since_last_subgoal += 1
 
     def should_terminate_episode(self, physics):
         # if self._walker.aliveness(physics) < self._aliveness_threshold:
@@ -197,12 +212,25 @@ class MinimujoTask(composer.Task):
 
     def get_reward(self, physics):
         del physics
-        reward = -1 * (self._minimujo_arena._extrinsic_reward <= 0)
+        reward = self._reward_func(self._minimujo_arena._extrinsic_reward, self._minimujo_arena._intrinsic_reward)
         self._cum_reward += reward
+
         return reward
 
     def get_discount(self, physics):
         del physics
         return self._discount
     
+    def _sparse_reward(self, extrinsic, intrinsic):
+        return extrinsic
+        
+    def _sparse_cost(self, extrinsic, intrinsic):
+        return -1 * (extrinsic <= 0)
+
+    def _subgoal_reward(self, extrinsic, intrinsic):
+        return extrinsic + intrinsic
     
+    def _subgoal_cost(self, extrinsic, intrinsic):
+        if extrinsic > 0 or intrinsic > 0:
+            self._steps_since_last_subgoal = 0
+        return extrinsic + np.exp(-self._subgoal_reward_decay * self._steps_since_last_subgoal) - 1

@@ -3,6 +3,8 @@ from collections import deque
 from minimujo.minigrid.grid_wrapper import GridWrapper
 from minigrid.core.world_object import Door, Key, Ball, Box, Goal, Wall, Lava
 
+from minimujo.minigrid.minigrid_goals import MinigridGoal
+
 class AgentDummy:
 
     def __init__(self, cur_pos, flat_idx) -> None:
@@ -238,11 +240,9 @@ class MinigridSolver:
         for world_object, path in solution[::-1]:
             world_object = world_object[0]
             if len(path) < 2:
-                print('short_path', path)
                 total_actions.extend(path)
                 continue
             partial_actions, agent_dir = self.get_actions_from_idx_path(path_prefix + path[::-1], agent_dir)
-            print(path_prefix + path[::-1])
             path_prefix = path[1:2]
             # print(path[::-1], partial_actions, agent_dir, type(world_object))
             total_actions.extend(partial_actions)
@@ -253,7 +253,22 @@ class MinigridSolver:
             #         total_actions.append('toggle')
         return total_actions
     
-    def get_solution_actions(self):
+    def get_subgoals_from_solution(self, solution):
+        subgoals = []
+        path_prefix = []
+        for world_object, path in solution[::-1]:
+            world_object = world_object[0]
+            if len(path) < 2:
+                continue
+            for agent_idx in path[:0:-1]:
+                target_pos = agent_idx % self.grid.width, agent_idx // self.grid.height
+                goal_func = MinigridGoal(target_pos)
+                subgoals.append(goal_func)
+        if len(subgoals) > 0:
+            subgoals.pop(0)
+        return subgoals
+    
+    def get_solution(self):
         c, r = self.minigrid.agent_pos
         agent_flat_idx = self.get_flat_idx(r, c)
         self.agent = AgentDummy(self.minigrid.agent_pos, agent_flat_idx)
@@ -265,17 +280,24 @@ class MinigridSolver:
         goal_obj = list(connected.keys())[0]
         for world_obj in connected.keys():
             if type(world_obj) is Ball or Goal:
-                print('found goal', world_obj)
                 goal_obj = world_obj
                 break
 
-        solution, total_dist = self.shortest_path_through_world_object_graph(connected, self.agent, goal_obj)
+        return self.shortest_path_through_world_object_graph(connected, self.agent, goal_obj)
+
+    def get_solution_actions_and_subgoals(self):
+        solution_return = self.get_solution()
+        if solution_return is None:
+            return [], []
+        solution, _ = solution_return
         actions = self.get_actions_from_solution(solution)
-        if type(goal_obj) is Goal:
-            actions.append('forward')
-        elif type(goal_obj) is Ball:
-            actions.append('pickup')
-        return actions
+        subgoals = self.get_subgoals_from_solution(solution)
+        # if type(goal_obj) is Goal:
+        #     actions.append('forward')
+        # elif type(goal_obj) is Ball:
+        #     actions.append('pickup')
+        actions.append('forward')
+        return actions, subgoals
 
     
     def get_pretty_obj_name(self, world_obj):
@@ -326,13 +348,24 @@ if __name__ == "__main__":
 
     max_steps = 50
     while max_steps > 0:
-        actions = solver.get_solution_actions()
+        actions, subgoals = solver.get_solution_actions_and_subgoals()
         col, row = tuple(minigrid_env.agent_pos)
         agent_idx = row * solver.grid.width + col
-        print(agent_idx, 'actions', actions)
         
         action_id = MinigridSolver.ACTION_MAP[actions[0]]
         _, _, terminated, truncated, _ = minigrid_env.step(action_id)
+
+        for idx, subgoal in enumerate(subgoals):
+            goal_rew = subgoal(minigrid_env)
+            if goal_rew > 0:
+                if idx == 0:
+                    if len(subgoals) == 1:
+                        print(subgoal, goal_rew)
+                    else:
+                        print(subgoal, goal_rew, 'next:', subgoals[idx+1])
+                else:
+                    print(f'skipped to idx {idx}', subgoal)
+
         if truncated:
             print('Truncated: did not complete environment')
             break
@@ -343,3 +376,4 @@ if __name__ == "__main__":
     # for action in actions:
     #     action_id = MinigridSolver.ACTION_MAP[action]
     #     minigrid_env.step(action_id)
+    print('remaining subgoals:', subgoals)

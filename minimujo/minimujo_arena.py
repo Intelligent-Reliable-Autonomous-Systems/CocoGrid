@@ -20,7 +20,8 @@ class MinimujoArena(mazes.MazeWithTargets):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240, name='minimujo',
             skybox_texture=None, 
             wall_textures=None, 
-            floor_textures=None):
+            floor_textures=None,
+            use_subgoal_rewards=False):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -104,7 +105,7 @@ class MinimujoArena(mazes.MazeWithTargets):
         self.setDoorDirections(labmaze_matrix)
 
         self._walker_position = np.array([0,0,0])
-        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map)
+        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
         self._terminated = False
         self._extrinsic_reward = 0
 
@@ -168,7 +169,8 @@ class MinimujoArena(mazes.MazeWithTargets):
         if not self._terminated:
             reward, terminated = self._minigrid_manager.sync_minigrid(self)
             self._terminated = terminated
-            self._extrinsic_reward += reward
+            self._extrinsic_reward = reward
+            self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self)
 
     @property
     def walker_position(self):
@@ -178,10 +180,19 @@ class MinimujoArena(mazes.MazeWithTargets):
     def walker_grid_position(self):
         return self.world_to_minigrid_position(self.walker_position)
     
+    @property
+    def walker_grid_continuous_position(self):
+        return self.world_to_minigrid_continuous_position(self.walker_position)
+    
     def world_to_minigrid_position(self, position):
         col, row = self.world_to_grid_positions([position])[0]
         # col, row are integers in center of tile, so need to round to nearest integer. e.g -.6->1, 1.4->1
         return int(row + 1/2), int(col + 1/2)
+    
+    def world_to_minigrid_continuous_position(self, position):
+        col, row = self.world_to_grid_positions([position])[0]
+        # col, row are integers in center of tile, so need to round to nearest integer. e.g -.6->1, 1.4->1
+        return row, col
     
     def minigrid_to_world_position(self, row, col):
         position = self.grid_to_world_positions([(row, col)])[0]

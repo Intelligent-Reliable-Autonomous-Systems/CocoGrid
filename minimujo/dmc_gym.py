@@ -169,6 +169,7 @@ class DMCGym(Env):
             environment_kwargs,
         )
         self.arena = self._env._task._minimujo_arena
+        self.is_image_obs = 'top_camera' in self._env._task.observation_types
 
         # placeholder to allow built in gymnasium rendering
         self.render_mode = "rgb_array"
@@ -211,6 +212,7 @@ class DMCGym(Env):
             action = action.astype(np.float32)
         assert self._action_space.contains(action)
         timestep = self._env.step(action)
+        self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
         # observation = timestep.observation
         reward = timestep.reward
@@ -232,6 +234,7 @@ class DMCGym(Env):
         if options:
             logging.warn("Currently doing nothing with options={:}".format(options))
         timestep = self._env.reset()
+        self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
         # observation = timestep.observation
         info = {}
@@ -248,12 +251,17 @@ class DMCGym(Env):
             image = self._get_backup_image(tile_size=width//grid_width)
         else:
             try:
+                raise Exception('gasgasd')
                 camera_id = camera_id or self.render_camera_id
                 image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
             except:
-                # if OpenGL is not defined, use a backup rendering
-                self._force_backup_render = True
-                image = self._get_backup_image()
+                if 'top_camera' in self.last_observation:
+                    image = self.last_observation['top_camera']
+                    width, height = image.shape[:2]
+                else:
+                    # if OpenGL is not defined, use a backup rendering
+                    self._force_backup_render = True
+                    image = self._get_backup_image()
 
         if self.track_position:
             self._render_trajectory(image, tile_size=width//grid_width)

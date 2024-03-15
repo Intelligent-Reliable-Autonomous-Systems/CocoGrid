@@ -4,13 +4,55 @@ from minigrid.core.world_object import Door, Key, Ball, Box, Goal
 import numpy as np
 
 from minimujo.minigrid.grid_wrapper import GridWrapper
+from minimujo.minigrid.minigrid_solver import MinigridSolver
 
 class MinigridManager:
-    def __init__(self, minigrid, object_entities):
+    def __init__(self, minigrid, object_entities, use_subgoal_rewards=False):
         self._minigrid = minigrid
         self._objects = object_entities
         self._grid = GridWrapper(self._minigrid.grid)
         self._minigrid.grid = self._grid
+
+        self._use_subgoal_rewards = use_subgoal_rewards
+        self._solver = None
+        if use_subgoal_rewards:
+            self._solver = MinigridSolver(minigrid)
+        self._replan_subgoal_interval = 10
+        self._replan_subgoal_count = 0
+        self._allow_subgoal_skips = False
+        self._current_subgoals = []
+
+    def subgoal_rewards(self, arena, dense=False):
+        if not self._use_subgoal_rewards:
+            return 0
+        
+        
+        current_subgoals = self._current_subgoals
+        self._replan_subgoal_count += 1
+        if self._replan_subgoal_count > self._replan_subgoal_interval:
+            _, self._current_subgoals = self._solver.get_solution_actions_and_subgoals()
+            self._replan_subgoal_count = 0
+
+        if len(current_subgoals) == 0:
+            return 0
+        
+        goal_rew = 0
+        walker_pos = arena.walker_grid_continuous_position
+        if self._allow_subgoal_skips:
+            for idx, subgoal in enumerate(current_subgoals):
+                goal_rew = subgoal(self._minigrid)
+                if goal_rew > 0:
+                    if idx == 0:
+                        print('Completed subgoal', subgoal)
+                    else:
+                        print(f'Skipped subgoal', subgoal)
+        else:
+            subgoal = current_subgoals[0]
+            goal_rew = subgoal(self._minigrid, dense=dense, walker_pos=walker_pos)
+            if goal_rew > 0:
+                print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
+                current_subgoals.pop(0)
+        return goal_rew
 
     def sync_minigrid(self, arena):
         reward = 0
@@ -61,7 +103,7 @@ class MinigridManager:
                 reward += 1
                 terminated = True
 
-        return reward > 0, terminated
+        return int(reward > 0), terminated
 
     def handle_grabbable(self, grabbable, arena):
         reward, terminated = (0, False)

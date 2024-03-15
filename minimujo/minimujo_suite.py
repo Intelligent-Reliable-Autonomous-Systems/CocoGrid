@@ -28,7 +28,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     else:
         raise Exception(f'walker_type {walker_type} not supported')
 
-    task_keys = ['observation_type']
+    task_keys = ['observation_type', 'reward_type']
     task_kwargs = {}
     for key in task_keys:
         if key in environment_kwargs:
