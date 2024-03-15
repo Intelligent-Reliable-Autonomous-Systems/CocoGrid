@@ -34,8 +34,10 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
         if key in environment_kwargs:
             task_kwargs[key] = environment_kwargs.pop(key)
 
-    if 'reward_type' in task_kwargs and task_kwargs['reward_type'] in ['subgoal', 'subgoal_cost']:
+    if task_kwargs.get('reward_type', None) in ['subgoal', 'subgoal_cost', 'subgoal_dense']:
         environment_kwargs['use_subgoal_rewards'] = True
+    if task_kwargs.get('reward_type', None) in ['subgoal_dense']:
+        environment_kwargs['dense_rewards'] = True
 
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
 
@@ -56,8 +58,8 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     )
     return env
 
-def get_gym_env_from_suite(domain, task, time_limit=20, random=None, env_params=None, track_position=False):
-    return DMCGym(domain=domain, task=task, task_kwargs=dict(time_limit=time_limit, random=random), environment_kwargs=env_params, rendering=None, track_position=track_position)
+def get_gym_env_from_suite(domain, task, walker_type='ball', time_limit=20, random=None, env_params=None, track_position=False):
+    return DMCGym(domain=domain, task=task, task_kwargs=dict(walker_type=walker_type, time_limit=time_limit, random=random), environment_kwargs=env_params, rendering=None, track_position=track_position)
 
 SUITE = containers.TaggedTasks()
 

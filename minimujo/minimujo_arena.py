@@ -21,7 +21,8 @@ class MinimujoArena(mazes.MazeWithTargets):
             skybox_texture=None, 
             wall_textures=None, 
             floor_textures=None,
-            use_subgoal_rewards=False):
+            use_subgoal_rewards=False,
+            dense_rewards=False):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -108,6 +109,7 @@ class MinimujoArena(mazes.MazeWithTargets):
         self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
         self._terminated = False
         self._extrinsic_reward = 0
+        self._dense_rewards = dense_rewards
 
     def _build_observables(self):
         return MinimujoObservables(self, self.cam_width, self.cam_height)
@@ -171,7 +173,7 @@ class MinimujoArena(mazes.MazeWithTargets):
             reward, terminated = self._minigrid_manager.sync_minigrid(self)
             self._terminated = terminated
             self._extrinsic_reward = reward
-            self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self)
+            self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self, dense=self._dense_rewards)
 
     @property
     def walker_position(self):

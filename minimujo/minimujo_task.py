@@ -97,7 +97,8 @@ class MinimujoTask(composer.Task):
             'sparse': self._sparse_reward,
             'sparse_cost': self._sparse_cost,
             'subgoal': self._subgoal_reward,
-            'subgoal_cost': self._subgoal_cost
+            'subgoal_cost': self._subgoal_cost,
+            'subgoal_dense': self._subgoal_reward # the dense flag has been set in arena
         }
         self.reward_type = reward_type
         if not reward_type in reward_func_map:

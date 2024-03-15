@@ -22,9 +22,11 @@ class MinigridManager:
         self._allow_subgoal_skips = False
         self._current_subgoals = []
         self._max_subgoals = np.inf
+        self._last_dist = None
 
     def reset(self):
         self._max_subgoals = np.inf
+        self._last_dist = None
 
     def subgoal_rewards(self, arena, dense=False):
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
@@ -60,6 +62,18 @@ class MinigridManager:
                 print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
                 current_subgoals.pop(0)
                 self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
+                if dense:
+                    last_dist = self._last_dist or 0
+                    self._last_dist = None
+                    return -last_dist
+            elif dense:
+                if self._last_dist is None:
+                    self._last_dist = goal_rew
+                diff = goal_rew - self._last_dist
+                self._last_dist = goal_rew
+                if diff < 0:
+                    diff *= 2 # penalize going backwards
+                return diff
         return goal_rew
 
     def sync_minigrid(self, arena):

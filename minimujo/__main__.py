@@ -16,6 +16,8 @@ parser.add_argument('--walker', '-w', type=str, default='ball', help="The type o
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
 parser.add_argument('--seed', type=int, default=None, help='The random seed to be applied')
+
+parser.add_argument('--print-reward', action='store_true', help='Prints the reward and cumulative reward to the console')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -96,6 +98,7 @@ elif args.gym:
     env.reset()
 
     num_steps = 0
+    reward_sum = 0
     while True:
         keys = key.get_pressed()
         if keys[pygame.K_ESCAPE]:
@@ -105,12 +108,21 @@ elif args.gym:
         if action is None:
             break
         obs, rew, term, trunc, info = env.step(action)
+        reward_sum += rew
         num_steps += 1
+
+        if args.print_reward:
+            print('reward:', rew)
+
         if term:
             print(f'Terminated after {num_steps} steps')
+            if args.print_reward:
+                print('cumulative reward:', reward_sum)
             break
         if trunc:
             print(f'Truncated after {num_steps} steps')
+            if args.print_reward:
+                print('cumulative reward:', reward_sum)
             break
 
 elif args.minigrid:
