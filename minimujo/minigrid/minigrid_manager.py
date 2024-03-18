@@ -71,8 +71,6 @@ class MinigridManager:
                     self._last_dist = goal_rew
                 diff = goal_rew - self._last_dist
                 self._last_dist = goal_rew
-                if diff < 0:
-                    diff *= 2 # penalize going backwards
                 return diff
         return goal_rew
 
