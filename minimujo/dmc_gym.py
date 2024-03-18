@@ -260,7 +260,7 @@ class DMCGym(Env):
                 else:
                     # if OpenGL is not defined, use a backup rendering
                     self._force_backup_render = True
-                    image = self._get_backup_image()
+                    image = self._get_backup_image(tile_size=width//grid_width)
 
         if self.track_position:
             self._render_trajectory(image, tile_size=width//grid_width)
