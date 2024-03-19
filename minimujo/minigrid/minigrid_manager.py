@@ -27,6 +27,7 @@ class MinigridManager:
         self._max_subgoals = np.inf
         self._last_dist = None
         self._subgoal_dist = 0
+        self._subgoal_init_dist = 0
 
     def subgoal_rewards(self, arena, dense=False):
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
@@ -64,11 +65,14 @@ class MinigridManager:
                 # self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
                 self._subgoal_dist -= 1
                 goal_rew = 0
+                if dense and len(current_subgoals) == 0:
+                    return (self._last_dist) / self._subgoal_init_dist
         if dense:
-            total_distance = (-goal_rew) + self._subgoal_dist
+            total_distance = (-goal_rew) + (self._subgoal_dist - 1)
             if self._last_dist == None:
                 self._last_dist = total_distance
-            diff = self._last_dist - total_distance
+                self._subgoal_init_dist = total_distance
+            diff = (self._last_dist - total_distance) / self._subgoal_init_dist
             self._last_dist = total_distance
             return diff
         return goal_rew
