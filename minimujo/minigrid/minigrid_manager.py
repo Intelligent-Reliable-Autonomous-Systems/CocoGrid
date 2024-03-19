@@ -21,12 +21,12 @@ class MinigridManager:
         self._replan_subgoal_count = 0
         self._allow_subgoal_skips = False
         self._current_subgoals = []
-        self._max_subgoals = np.inf
-        self._last_dist = None
+        self.reset()
 
     def reset(self):
         self._max_subgoals = np.inf
         self._last_dist = None
+        self._subgoal_dist = 0
 
     def subgoal_rewards(self, arena, dense=False):
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
@@ -35,12 +35,12 @@ class MinigridManager:
         current_subgoals = self._current_subgoals
         self._replan_subgoal_count += 1
         if self._replan_subgoal_count > self._replan_subgoal_interval:
-            _, self._current_subgoals = self._solver.get_solution_actions_and_subgoals()
+            _, self._current_subgoals, self._subgoal_dist = self._solver.get_solution_actions_and_subgoals()
             self._replan_subgoal_count = 0
             
             # do not allow backtracking to farm subgoals
             self._max_subgoals = min(len(self._current_subgoals), self._max_subgoals)
-            self._current_subgoals = self._current_subgoals[-self._max_subgoals:]
+            # self._current_subgoals = self._current_subgoals[-self._max_subgoals:]
 
         if len(current_subgoals) == 0:
             return 0
@@ -61,17 +61,16 @@ class MinigridManager:
             if goal_rew > 0:
                 print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
                 current_subgoals.pop(0)
-                self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
-                if dense:
-                    last_dist = self._last_dist or 0
-                    self._last_dist = None
-                    return -last_dist
-            elif dense:
-                if self._last_dist is None:
-                    self._last_dist = goal_rew
-                diff = goal_rew - self._last_dist
-                self._last_dist = goal_rew
-                return diff
+                # self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
+                self._subgoal_dist -= 1
+                goal_rew = 0
+        if dense:
+            total_distance = (-goal_rew) + self._subgoal_dist
+            if self._last_dist == None:
+                self._last_dist = total_distance
+            diff = self._last_dist - total_distance
+            self._last_dist = total_distance
+            return diff
         return goal_rew
 
     def sync_minigrid(self, arena):

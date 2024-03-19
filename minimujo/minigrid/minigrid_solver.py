@@ -256,14 +256,18 @@ class MinigridSolver:
     def get_subgoals_from_solution(self, solution):
         subgoals = []
         path_prefix = []
-        for world_object, path in solution[::-1]:
+        for i in range(len(solution)-1,-1,-1):
+            world_object, path = solution[i]
             world_object = world_object[0]
             if len(path) < 2:
                 continue
-            for agent_idx in path[:0:-1]:
+            if i > 0:
+                path = path[0:]
+            for agent_idx in path[::-1]:
                 target_pos = agent_idx % self.grid.width, agent_idx // self.grid.height
                 goal_func = MinigridGoal(target_pos)
                 subgoals.append(goal_func)
+            
         if len(subgoals) > 0:
             subgoals.pop(0)
         return subgoals
@@ -288,8 +292,8 @@ class MinigridSolver:
     def get_solution_actions_and_subgoals(self):
         solution_return = self.get_solution()
         if solution_return is None:
-            return [], []
-        solution, _ = solution_return
+            return [], [], 0
+        solution, distance = solution_return
         actions = self.get_actions_from_solution(solution)
         subgoals = self.get_subgoals_from_solution(solution)
         # if type(goal_obj) is Goal:
@@ -297,7 +301,7 @@ class MinigridSolver:
         # elif type(goal_obj) is Ball:
         #     actions.append('pickup')
         actions.append('forward')
-        return actions, subgoals
+        return actions, subgoals, distance
 
     
     def get_pretty_obj_name(self, world_obj):
@@ -337,7 +341,7 @@ class MinigridSolver:
     
 if __name__ == "__main__":
     import gymnasium as gym
-    minigrid_id = "MiniGrid-ObstructedMaze-2Dl-v0"
+    minigrid_id = "MiniGrid-Empty-5x5-v0"
     # minigrid_id = "MiniGrid-Playground-v0"
     minigrid_env = gym.make(minigrid_id, render_mode='human').unwrapped
     minigrid_env.reset()

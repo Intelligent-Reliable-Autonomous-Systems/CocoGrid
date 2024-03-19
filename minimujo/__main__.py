@@ -25,6 +25,9 @@ print(long_dash)
 
 def ensure_env():
     if args.env not in minimujo_suite.SUITE.keys():
+        if f'Minimujo-{args.env}' in minimujo_suite.SUITE.keys():
+            args.env = f'Minimujo-{args.env}'
+            return
         raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
 
 if args.interactive:
