@@ -11,11 +11,13 @@ parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', he
 parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment.')
 parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
 parser.add_argument('--obs-type', '-o', type=str, default='top_camera', help="What type of observation should the environment emit? Options are 'top_camera', 'walker', 'pos'")
+parser.add_argument('--img-obs-format', default='0-255', help="What format should image outputs be? Options are '0-255' (uint8) and '0-1' (float)")
 parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="What type of reward should the environment emit? Options are 'sparse', 'sparse_cost', 'subgoal', 'subgoal_cost'")
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
 parser.add_argument('--seed', type=int, default=None, help='The random seed to be applied')
+parser.add_argument('--episodes', type=int, default=1, help="The number of episodes to run the gym env for")
 
 parser.add_argument('--print-reward', action='store_true', help='Prints the reward and cumulative reward to the console')
 args = parser.parse_args()
@@ -72,7 +74,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, random=args.seed, walker_type=args.walker, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale}, track_position=args.track)
+    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
@@ -102,9 +104,11 @@ elif args.gym:
 
     num_steps = 0
     reward_sum = 0
+    num_episodes = 0
     while True:
         keys = key.get_pressed()
         if keys[pygame.K_ESCAPE]:
+            print('Cumulative reward (to this point):', reward_sum)
             print('Manually terminated')
             break
         action = get_action()
@@ -117,16 +121,15 @@ elif args.gym:
         if args.print_reward:
             print('reward:', rew)
 
-        if term:
-            print(f'Terminated after {num_steps} steps')
-            if args.print_reward:
-                print('cumulative reward:', reward_sum)
-            break
-        if trunc:
-            print(f'Truncated after {num_steps} steps')
-            if args.print_reward:
-                print('cumulative reward:', reward_sum)
-            break
+        if term or trunc:
+            trunc_or_term = 'Truncated' if trunc else 'Terminated'
+            print('Cumulative reward:', reward_sum)
+            print(f'{trunc_or_term} after {num_steps} steps')
+            num_episodes += 1
+            if num_episodes >= args.episodes:
+                break
+            env.reset()
+            reward_sum = 0
 
 elif args.minigrid:
     import gymnasium as gym

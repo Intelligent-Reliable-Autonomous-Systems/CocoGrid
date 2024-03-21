@@ -17,13 +17,15 @@ class MinigridManager:
         self._solver = None
         if use_subgoal_rewards:
             self._solver = MinigridSolver(minigrid)
-        self._replan_subgoal_interval = 10
-        self._replan_subgoal_count = 0
-        self._allow_subgoal_skips = False
-        self._current_subgoals = []
+        
         self.reset()
 
     def reset(self):
+        self._replan_subgoal_interval = 10
+        self._replan_subgoal_count = self._replan_subgoal_interval
+        self._allow_subgoal_skips = False
+        self._current_subgoals = []
+
         self._max_subgoals = np.inf
         self._last_dist = None
         self._subgoal_dist = 0

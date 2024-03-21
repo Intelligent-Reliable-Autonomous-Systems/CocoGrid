@@ -230,7 +230,6 @@ class DMCGym(Env):
 
         if self.image_observation_format == '0-1':
             observation = observation / 255.
-        print(observation.dtype, np.max(observation))
 
         return observation, reward, termination, truncation, info
 
@@ -248,7 +247,6 @@ class DMCGym(Env):
 
         if self.image_observation_format == '0-1':
             observation = observation / 255.
-        print(observation.dtype, np.max(observation))
         # observation = timestep.observation
         info = {}
         return observation, info
