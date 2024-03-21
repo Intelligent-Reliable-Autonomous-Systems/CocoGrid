@@ -149,6 +149,7 @@ class DMCGym(Env):
         task,
         task_kwargs={},
         environment_kwargs={},
+        image_observation_format='0-255',
         rendering='egl',
         render_height=64,
         render_width=64,
@@ -177,6 +178,7 @@ class DMCGym(Env):
         self.render_width = render_width
         self.render_camera_id = render_camera_id
 
+        self.image_observation_format = image_observation_format
         self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values())
         self._action_space = _spec_to_box([self._env.action_spec()])
 
@@ -210,7 +212,10 @@ class DMCGym(Env):
     def step(self, action):
         if action.dtype.kind == "f":
             action = action.astype(np.float32)
-        assert self._action_space.contains(action)
+        # if action[0] < 0:
+        #     # the grabber is in range [0,1]
+        #     action[0] = 0
+        # assert self._action_space.contains(action), f'action {action} is not in action space {self.action_space}'
         timestep = self._env.step(action)
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
@@ -222,6 +227,10 @@ class DMCGym(Env):
 
         if self.track_position:
             self.trajectory.append(np.array(self.arena.walker_position))
+
+        if self.image_observation_format == '0-1':
+            observation = observation / 255.
+        print(observation.dtype, np.max(observation))
 
         return observation, reward, termination, truncation, info
 
@@ -236,6 +245,10 @@ class DMCGym(Env):
         timestep = self._env.reset()
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
+
+        if self.image_observation_format == '0-1':
+            observation = observation / 255.
+        print(observation.dtype, np.max(observation))
         # observation = timestep.observation
         info = {}
         return observation, info
