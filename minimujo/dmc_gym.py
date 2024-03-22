@@ -55,7 +55,7 @@ def _spec_to_box_v2(spec):
     else:
         return next(iter(boxes.values()))
     
-def _spec_to_box_v3(spec):
+def _spec_to_box_v3(spec, image_format=None):
     box_params = {}
     for s in spec:
         if type(s) == specs.Array:
@@ -69,6 +69,8 @@ def _spec_to_box_v3(spec):
         if np.ndim(s_max) == 0:
             s_max = s_max.item()
         box = (s_min, s_max, s.shape, s.dtype)
+        if len(s.shape) == 3 and image_format == '0-1':
+            box = (0, 1, s.shape, np.float32)
         if s.name:
             box_params[s.name] = box
     
@@ -179,7 +181,7 @@ class DMCGym(Env):
         self.render_camera_id = render_camera_id
 
         self.image_observation_format = image_observation_format
-        self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values())
+        self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values(), image_format=image_observation_format)
         self._action_space = _spec_to_box([self._env.action_spec()])
 
         # set seed if provided with task_kwargs
@@ -215,7 +217,7 @@ class DMCGym(Env):
         # if action[0] < 0:
         #     # the grabber is in range [0,1]
         #     action[0] = 0
-        # assert self._action_space.contains(action), f'action {action} is not in action space {self.action_space}'
+        assert self._action_space.contains(action), f'action {action} is not in action space {self.action_space}'
         timestep = self._env.step(action)
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
@@ -229,7 +231,7 @@ class DMCGym(Env):
             self.trajectory.append(np.array(self.arena.walker_position))
 
         if self.image_observation_format == '0-1':
-            observation = observation / 255.
+            observation = (observation / 255.).astype(np.float32)
 
         return observation, reward, termination, truncation, info
 
@@ -246,7 +248,7 @@ class DMCGym(Env):
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
 
         if self.image_observation_format == '0-1':
-            observation = observation / 255.
+            observation = (observation / 255.).astype(np.float32)
         # observation = timestep.observation
         info = {}
         return observation, info
