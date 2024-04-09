@@ -93,7 +93,7 @@ class MinimujoTask(composer.Task):
                     return walker_vel
             else:
                 def get_walker_vel(physics):
-                    walker_vel = physics.bind(self._walker.root_body).xvel
+                    walker_vel = physics.bind(self._walker.root_body).cvel
                     return walker_vel[:2]
             absolute_velocity = observable_lib.Generic(get_walker_vel)
             absolute_velocity.enabled = True

@@ -26,6 +26,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     elif walker_type == 'ant':
         walker = ant.Ant()
         environment_kwargs['xy_scale'] = max(2, environment_kwargs.get('xy_scale', 2))
+        environment_kwargs['spawn_padding'] = 0.8
     elif isinstance(walker_type, Walker):
         walker = walker_type
     else:

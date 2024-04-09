@@ -14,15 +14,11 @@ from minimujo.entities.contact_tile_entity import ContactTileEntity
 from minimujo.entities.door_entity import DoorEntity
 from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
-from .minigrid.minigrid_manager import MinigridManager
+from minimujo.minigrid.minigrid_manager import MinigridManager
 
 class MinimujoArena(mazes.MazeWithTargets):
-    def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240, name='minimujo',
-            skybox_texture=None, 
-            wall_textures=None, 
-            floor_textures=None,
-            use_subgoal_rewards=False,
-            dense_rewards=False):
+    def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
+            random_spawn=False, spawn_padding=0.3, use_subgoal_rewards=False, dense_rewards=False):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -34,6 +30,8 @@ class MinimujoArena(mazes.MazeWithTargets):
         self._minigrid = minigrid.unwrapped
         self.cam_width = cam_width
         self.cam_height = cam_height
+        self.random_spawn = random_spawn
+        self.spawn_padding = spawn_padding
 
         maze_width = self._minigrid.grid.width
         walls = ['*' if type(s) is Wall else ' ' for s in self._minigrid.grid.grid]
@@ -49,10 +47,7 @@ class MinimujoArena(mazes.MazeWithTargets):
             maze=self._labmaze,
             xy_scale=xy_scale,
             z_height=z_height,
-            skybox_texture=skybox_texture,
-            wall_textures=wall_textures,
-            floor_textures=floor_textures,
-            name=name
+            name='minimujo'
         )
         
         self._grabber = Grabber()
@@ -129,6 +124,9 @@ class MinimujoArena(mazes.MazeWithTargets):
             door['dir'] = dir
     
     def initialize_arena(self, physics, random_state):
+        if self.random_spawn:
+            self._spawn_positions = (self.get_random_spawn_position(),)
+
         door_quats = [
             [1, 0, 0, 0],
             [math.sin(math.pi/4), 0, 0, math.sin(math.pi/4)],
@@ -150,9 +148,8 @@ class MinimujoArena(mazes.MazeWithTargets):
                     print('no entity', obj)
                     continue
                 obj['entity'].set_pose(physics, position=obj['world_pos'])   
-
-        if self._walker:
-            self._walker_position = physics.bind(self._walker.root_body).xpos 
+        
+        self._walker_position = self._spawn_positions[0]
 
         self._minigrid_manager.reset()
         self._terminated = False
@@ -204,6 +201,44 @@ class MinimujoArena(mazes.MazeWithTargets):
         position = self.grid_to_world_positions([(row, col)])[0]
         # returns center position of tile
         return position
+    
+    def maze_bounds(self):
+        x_low = self._xy_scale * -self._x_offset
+        y_low = self._xy_scale * -self._y_offset
+        x_high = self._xy_scale * (-self._x_offset + self._maze.width)
+        y_high = self._xy_scale * (-self._y_offset + self._maze.height)
+        return x_low, y_low, x_high, y_high
+    
+    def get_random_spawn_position(self):
+        MAX_TRIES = 100
+        x_low, y_low, x_high, y_high = self.maze_bounds()
+        for _ in range(MAX_TRIES):
+            x = np.random.uniform(x_low, x_high)
+            y = np.random.uniform(y_low, y_high)
+            test_coords = [
+                (x-self.spawn_padding, y-self.spawn_padding),
+                (x-self.spawn_padding, y+self.spawn_padding),
+                (x+self.spawn_padding, y-self.spawn_padding),
+                (x+self.spawn_padding, y+self.spawn_padding),
+            ]
+            is_valid = True
+            for test_x, test_y in test_coords:
+                row, col = self.world_to_minigrid_position((test_x, test_y, 0))
+                try:
+                    if self._minigrid.grid.get(row, col) is not None:
+                        # is overlapping something
+                        is_valid = False
+                        break
+                except:
+                    # was out of bounds
+                    is_valid = False
+                    break
+            if is_valid:
+                return np.array([x, y, 0])
+        
+        # backup spawn position
+        col, row = self._minigrid.agent_pos
+        return self.grid_to_world_positions(((row, col),))[0]
     
 class MinimujoObservables(composer.Observables):
 
