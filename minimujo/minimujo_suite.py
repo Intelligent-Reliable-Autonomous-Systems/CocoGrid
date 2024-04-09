@@ -2,6 +2,7 @@ import functools
 
 from dm_control import composer
 from dm_control.locomotion.walkers import ant, cmu_humanoid, jumping_ball
+from dm_control.locomotion.walkers.base import Walker
 from dm_control.utils import containers
 from minimujo.dmc_gym import DMCGym
 import gymnasium
@@ -25,6 +26,8 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     elif walker_type == 'ant':
         walker = ant.Ant()
         environment_kwargs['xy_scale'] = max(2, environment_kwargs.get('xy_scale', 2))
+    elif isinstance(walker_type, Walker):
+        walker = walker_type
     else:
         raise Exception(f'walker_type {walker_type} not supported')
 

@@ -149,7 +149,10 @@ class MinimujoArena(mazes.MazeWithTargets):
                 if 'entity' not in obj or obj['entity'] is None:
                     print('no entity', obj)
                     continue
-                obj['entity'].set_pose(physics, position=obj['world_pos'])    
+                obj['entity'].set_pose(physics, position=obj['world_pos'])   
+
+        if self._walker:
+            self._walker_position = physics.bind(self._walker.root_body).xpos 
 
         self._minigrid_manager.reset()
         self._terminated = False

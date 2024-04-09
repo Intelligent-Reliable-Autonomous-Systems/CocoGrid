@@ -102,6 +102,8 @@ elif args.gym:
 
     env.reset()
 
+    print(f'Env has observation space {env.unwrapped.observation_space} and action space {env.unwrapped.action_space}')
+
     num_steps = 0
     reward_sum = 0
     num_episodes = 0
@@ -111,16 +113,19 @@ elif args.gym:
             print('Cumulative reward (to this point):', reward_sum)
             print('Manually terminated')
             break
-        action = get_action()
-        if action is None:
+        action = env.unwrapped.action_space.sample()
+        manual_action = get_action()
+        if manual_action is None:
             break
+        action[:3] = manual_action
+
         obs, rew, term, trunc, info = env.step(action)
         reward_sum += rew
         num_steps += 1
 
         if args.print_reward:
             print('reward:', rew)
-
+            
         if term or trunc:
             trunc_or_term = 'Truncated' if trunc else 'Terminated'
             print('Cumulative reward:', reward_sum)

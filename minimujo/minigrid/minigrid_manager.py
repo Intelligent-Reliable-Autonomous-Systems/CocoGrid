@@ -78,6 +78,11 @@ class MinigridManager:
             self._last_dist = total_distance
             return diff
         return goal_rew
+    
+    def get_current_goal_pos(self):
+        if len(self._current_subgoals) == 0:
+            return (0, 0)
+        return self._current_subgoals[0].agent_pos
 
     def sync_minigrid(self, arena):
         reward = 0

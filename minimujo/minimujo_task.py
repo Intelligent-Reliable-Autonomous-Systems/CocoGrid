@@ -72,16 +72,47 @@ class MinimujoTask(composer.Task):
             self._minimujo_arena.observables.get_observable('top_camera').enabled = True
             self._task_observables.update({'top_camera': self._minimujo_arena.observables.get_observable('top_camera')})
         if 'pos' in self.observation_types:
-            def get_walker_pos(physics):
-                walker_pos = physics.bind(self._walker.root_body).xpos
-                return walker_pos[:2]
+            freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
+            if len(freejoints) > 0:
+                def get_walker_pos(physics):
+                    walker_pos = physics.bind(freejoints[0]).qpos
+                    return walker_pos
+            else:
+                def get_walker_pos(physics):
+                    walker_pos = physics.bind(self._walker.root_body).xpos
+                    return walker_pos[:2]
             absolute_position = observable_lib.Generic(get_walker_pos)
             absolute_position.enabled = True
 
             self._task_observables.update({'abs_pos': absolute_position})
+        if 'vel' in self.observation_types:
+            freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
+            if len(freejoints) > 0:
+                def get_walker_vel(physics):
+                    walker_vel = physics.bind(freejoints[0]).qvel
+                    return walker_vel
+            else:
+                def get_walker_vel(physics):
+                    walker_vel = physics.bind(self._walker.root_body).xvel
+                    return walker_vel[:2]
+            absolute_velocity = observable_lib.Generic(get_walker_vel)
+            absolute_velocity.enabled = True
+
+            self._task_observables.update({'abs_vel': absolute_velocity})
+        if 'goal' in self.observation_types:
+            def get_goal_pos(physics):
+                goal_pos = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
+                return np.array(goal_pos)
+            goal_position = observable_lib.Generic(get_goal_pos)
+            goal_position.enabled = True
+
+            self._task_observables.update({'goal_pos': goal_position})
+
         if 'walker' in self.observation_types:
-            for observable in (self._walker.observables.proprioception +
-                            self._walker.observables.kinematic_sensors +
+            for observable in self._walker.observables.proprioception:
+                observable.enabled = True
+        if 'sensor' in self.observation_types:
+            for observable in (self._walker.observables.kinematic_sensors +
                             self._walker.observables.dynamic_sensors):
                 observable.enabled = True
         if 'egocentric_camera' in self.observation_types:
