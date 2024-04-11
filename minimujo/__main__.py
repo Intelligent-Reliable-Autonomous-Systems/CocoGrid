@@ -21,6 +21,7 @@ parser.add_argument('--seed', type=int, default=None, help='The random seed to b
 parser.add_argument('--episodes', type=int, default=1, help="The number of episodes to run the gym env for")
 
 parser.add_argument('--print-reward', action='store_true', help='Prints the reward and cumulative reward to the console')
+parser.add_argument('--print-obs', action='store_true', help='Prints the observation to the console')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -132,6 +133,9 @@ elif args.gym:
 
             if args.print_reward:
                 print('reward:', rew)
+
+            if args.print_obs:
+                print('obs:', obs)
             
         if term or trunc:
             trunc_or_term = 'Truncated' if trunc else 'Terminated'

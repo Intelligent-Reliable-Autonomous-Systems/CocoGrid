@@ -11,6 +11,7 @@ from gymnasium.envs.registration import registry
 from minimujo.custom_minigrid import register_custom_minigrid
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.minimujo_task import MinimujoTask
+from minimujo.walkers.square import Square
 
 def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, random=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
@@ -27,6 +28,8 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
         walker = ant.Ant()
         environment_kwargs['xy_scale'] = max(2, environment_kwargs.get('xy_scale', 2))
         environment_kwargs['spawn_padding'] = 0.8
+    elif walker_type == 'square':
+        walker = Square()
     elif isinstance(walker_type, Walker):
         walker = walker_type
     else:

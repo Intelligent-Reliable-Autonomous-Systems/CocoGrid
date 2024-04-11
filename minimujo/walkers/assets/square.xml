@@ -1,0 +1,17 @@
+<mujoco model="square">
+  <worldbody>
+    <body name="square_body" pos="0 0 0.3">
+      <camera name="floating" pos="-2 0 1" xyaxes="0 -1 0 .5 0 1" mode="trackcom" fovy="90"/>
+      <camera name="egocentric" pos=".25 0 .11" xyaxes="0 -1 0 0 0 1" fovy="90" />
+
+      <geom name="square_geom" type="box" size="0.3 0.3 0.3" density="1"/>
+      <joint name="forward_backward" type="slide" axis="1 0 0"/>
+      <joint name="left_right" type="slide" axis="0 1 0"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <motor name="forward_backward" joint="forward_backward" ctrlrange="-1 1" ctrllimited="True"/>
+    <motor name="left_right" joint="left_right" ctrlrange="-1 1" ctrllimited="True"/>
+  </actuator>
+</mujoco>
