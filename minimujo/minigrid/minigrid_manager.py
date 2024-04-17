@@ -64,9 +64,9 @@ class MinigridManager:
             if goal_rew > 0:
                 print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
                 current_subgoals.pop(0)
-                # self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
+                goal_rew = max(0, (self._max_subgoals - len(current_subgoals)))
+                self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
                 self._subgoal_dist -= 1
-                goal_rew = 0
                 if dense and len(current_subgoals) == 0:
                     return (self._last_dist) / self._subgoal_init_dist
         if dense:

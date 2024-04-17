@@ -20,8 +20,7 @@ class MinimujoTask(composer.Task):
                minimujo_arena,
                observation_type='top_camera',
                reward_type='sparse',
-               randomize_spawn_position=True,
-               randomize_spawn_rotation=True,
+               random_rotation=False,
                rotation_bias_factor=0,
                aliveness_reward=0.0,
                aliveness_threshold=DEFAULT_ALIVE_THRESHOLD,
@@ -51,10 +50,10 @@ class MinimujoTask(composer.Task):
         self._walker = walker
         self._minimujo_arena = minimujo_arena
         self._walker.create_root_joints(self._minimujo_arena.attach(self._walker))
-        self._minimujo_arena.register_walker(self._walker)
+        get_walker_pos, get_walker_vel = self._get_walker_pos_vel_functions(walker)
+        self._minimujo_arena.register_walker(self._walker, get_walker_pos)
 
-        self._randomize_spawn_position = randomize_spawn_position
-        self._randomize_spawn_rotation = randomize_spawn_rotation
+        self._randomize_spawn_rotation = random_rotation
         self._rotation_bias_factor = rotation_bias_factor
 
         self._aliveness_reward = aliveness_reward
@@ -101,8 +100,9 @@ class MinimujoTask(composer.Task):
             self._task_observables.update({'abs_vel': absolute_velocity})
         if 'goal' in self.observation_types:
             def get_goal_pos(physics):
-                goal_pos = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
-                return np.array(goal_pos)
+                col, row = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
+                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2]
+                # return np.array(goal_pos)
             goal_position = observable_lib.Generic(get_goal_pos)
             goal_position.enabled = True
 
@@ -158,11 +158,7 @@ class MinimujoTask(composer.Task):
     def _respawn(self, physics, random_state):
         self._walker.reinitialize_pose(physics, random_state)
 
-        if self._randomize_spawn_position:
-            self._spawn_position = self._minimujo_arena.spawn_positions[
-                random_state.randint(0, len(self._minimujo_arena.spawn_positions))]
-        else:
-            self._spawn_position = self._minimujo_arena.spawn_positions[0]
+        self._spawn_position = self._minimujo_arena.spawn_positions[0]
 
         if self._randomize_spawn_rotation:
             # Move walker up out of the way before raycasting.
@@ -223,6 +219,25 @@ class MinimujoTask(composer.Task):
         set1, set2 = self._walker_nonfoot_geomids, self._ground_geomids
         return ((contact.geom1 in set1 and contact.geom2 in set2) or
                 (contact.geom1 in set2 and contact.geom2 in set1))
+    
+    def _get_walker_pos_vel_functions(self, walker):
+        freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
+        if len(freejoints) > 0:
+            def get_walker_pos(physics):
+                walker_pos = physics.bind(freejoints[0]).qpos
+                return walker_pos
+            def get_walker_vel(physics):
+                    walker_vel = physics.bind(freejoints[0]).qvel
+                    return walker_vel
+        else:
+            def get_walker_pos(physics):
+                walker_pos = physics.bind(walker.root_body).xpos
+                return walker_pos
+            def get_walker_vel(physics):
+                    walker_vel = physics.bind(walker.root_body).cvel
+                    return walker_vel
+        
+        return get_walker_pos, get_walker_vel
 
     def after_step(self, physics, random_state):
         self._failure_termination = False

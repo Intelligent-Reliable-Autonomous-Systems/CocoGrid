@@ -16,6 +16,7 @@ parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="Wha
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--random-spawn', action='store_true', help='The walker is randomly positioned on reset')
+parser.add_argument('--random-rotate', action='store_true', help='The walker is randomly oriented on reset')
 parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
 parser.add_argument('--seed', type=int, default=None, help='The random seed to be applied')
 parser.add_argument('--episodes', type=int, default=1, help="The number of episodes to run the gym env for")
@@ -76,7 +77,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale, 'random_spawn': args.random_spawn}, track_position=args.track)
+    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale, 'random_spawn': args.random_spawn, 'random_rotation': args.random_rotate}, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
@@ -104,7 +105,7 @@ elif args.gym:
             return 'reset'
         return np.array([grab, -up, right])
 
-    env.reset()
+    obs, _ = env.reset()
 
     print(f'Env has observation space {env.unwrapped.observation_space} and action space {env.unwrapped.action_space}')
 
@@ -126,6 +127,15 @@ elif args.gym:
                 trunc = True
         else:
             action[:3] = manual_action
+
+            # def threshold_action(x):
+            #     return np.sign(x) * (abs(x) > 0.1)
+            # action[1] = threshold_action(obs[1] - obs[3])
+            # action[2] = -threshold_action(obs[0] - obs[2])
+            # action[1] = 1 if obs[1] > obs[3] else -1
+            # action[2] = 1 if obs[0] < obs[2] else -1
+            # print(action)
+
 
             obs, rew, term, trunc, info = env.step(action)
             reward_sum += rew

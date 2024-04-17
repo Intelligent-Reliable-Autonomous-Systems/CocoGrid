@@ -18,6 +18,11 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     highEnv.reset(seed=random)
 
     environment_kwargs = environment_kwargs or {}
+    task_kwargs = {}
+    task_keys = ['observation_type', 'reward_type', 'random_rotation']
+    for key in task_keys:
+        if key in environment_kwargs:
+            task_kwargs[key] = environment_kwargs.pop(key)
 
     if walker_type == 'rolling_ball' or walker_type == 'ball':
         walker = jumping_ball.RollingBallWithHead(initializer=tuple())
@@ -30,16 +35,11 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
         environment_kwargs['spawn_padding'] = 0.8
     elif walker_type == 'square':
         walker = Square()
+        task_kwargs['random_rotation'] = False
     elif isinstance(walker_type, Walker):
         walker = walker_type
     else:
         raise Exception(f'walker_type {walker_type} not supported')
-
-    task_keys = ['observation_type', 'reward_type']
-    task_kwargs = {}
-    for key in task_keys:
-        if key in environment_kwargs:
-            task_kwargs[key] = environment_kwargs.pop(key)
 
     if task_kwargs.get('reward_type', None) in ['subgoal', 'subgoal_cost', 'subgoal_dense']:
         environment_kwargs['use_subgoal_rewards'] = True

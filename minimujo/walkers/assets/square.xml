@@ -4,9 +4,20 @@
       <camera name="floating" pos="-2 0 1" xyaxes="0 -1 0 .5 0 1" mode="trackcom" fovy="90"/>
       <camera name="egocentric" pos=".25 0 .11" xyaxes="0 -1 0 0 0 1" fovy="90" />
 
-      <geom name="square_geom" type="box" size="0.3 0.3 0.3" density="1"/>
-      <joint name="forward_backward" type="slide" axis="1 0 0"/>
-      <joint name="left_right" type="slide" axis="0 1 0"/>
+      <geom name="square_geom" type="box" size="0.3 0.3 0.3" density="100" friction="0 0.005 0.0001"/>
+      <geom name="right_geom" type="box" pos="0.3 0 0" size="0.01 0.295 0.295" rgba="1 1 0 0.5"/>
+      <site name="right" type="box" pos="0.3 0 0" size="0.015 0.295 0.295" rgba="1 0 0 1"/>
+      <geom name="left_geom" type="box" pos="-0.3 0 0" size="0.01 0.295 0.295" rgba="1 1 0 0.5"/>
+      <site name="left" type="box" pos="-0.3 0 0" size="0.015 0.295 0.295" rgba="1 0 0 1"/>
+      <geom name="upper_geom" type="box" pos="0 0.3 0" size="0.295 0.01 0.295" rgba="1 1 0 0.5"/>
+      <site name="upper" type="box" pos="0 0.3 0" size="0.295 0.015 0.295" rgba="1 0 0 1"/>
+      <geom name="lower_geom" type="box" pos="0 -0.3 0" size="0.295 0.01 0.295" rgba="1 1 0 0.5"/>
+      <site name="lower" type="box" pos="0 -0.3 0" size="0.295 0.015 0.295" rgba="1 0 0 1"/>
+      <!-- <site name="contact1" type="box" pos="0.3 0 0" size="0.9 0.9 0.00001" rgba="0 0 0 0"/> -->
+      <body name="test">
+        <joint name="forward_backward" type="slide" axis="1 0 0"/>
+        <joint name="left_right" type="slide" axis="0 1 0"/>
+      </body>
     </body>
   </worldbody>
 
@@ -14,4 +25,11 @@
     <motor name="forward_backward" joint="forward_backward" ctrlrange="-1 1" ctrllimited="True"/>
     <motor name="left_right" joint="left_right" ctrlrange="-1 1" ctrllimited="True"/>
   </actuator>
+
+  <sensor>
+    <touch name="right" site="right"/>
+    <touch name="left" site="left"/>
+    <touch name="upper" site="upper"/>
+    <touch name="lower" site="lower"/>
+  </sensor>
 </mujoco>

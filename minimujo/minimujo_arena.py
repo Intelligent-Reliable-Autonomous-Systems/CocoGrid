@@ -158,8 +158,9 @@ class MinimujoArena(mazes.MazeWithTargets):
     def initialize_episode_mjcf(self, random_state):
         super().initialize_episode_mjcf(random_state)
 
-    def register_walker(self, walker):
+    def register_walker(self, walker, get_walker_pos):
         self._walker = walker
+        self._get_walker_pos = get_walker_pos
         self._grabber.register_walker(self._walker)
         for lava in self._mini_entity_map[Lava]:
             lava['entity'].register_walker(walker)
@@ -168,7 +169,8 @@ class MinimujoArena(mazes.MazeWithTargets):
 
     def before_step(self, physics, random_state):
         if self._walker:
-            self._walker_position = physics.bind(self._walker.root_body).xpos
+            self._walker_position = self._get_walker_pos(physics)[:3]
+            # print('position', self._walker_position)
         if not self._terminated:
             reward, terminated = self._minigrid_manager.sync_minigrid(self)
             self._terminated = terminated
