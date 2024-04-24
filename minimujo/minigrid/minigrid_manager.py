@@ -21,7 +21,7 @@ class MinigridManager:
         self._minigrid.grid = self._grid
 
         if self._use_subgoal_rewards:
-            self._solver = MinigridSolver(self._minigrid)
+            self._solver = self._get_solver()
 
         self._replan_subgoal_interval = 10
         self._replan_subgoal_count = self._replan_subgoal_interval
@@ -33,10 +33,13 @@ class MinigridManager:
         self._subgoal_dist = 0
         self._subgoal_init_dist = float('inf')
 
-    def has_solution(self):
+    def _get_solver(self):
         if self._solver is None:
             self._solver = MinigridSolver(self._minigrid)
-        _, _, dist = self._solver.get_solution_actions_and_subgoals()
+        return self._solver
+
+    def has_solution(self):
+        _, _, dist = self._get_solver().get_solution_actions_and_subgoals()
         return dist < 10000
 
     def subgoal_rewards(self, arena, dense=False):
@@ -44,7 +47,7 @@ class MinigridManager:
         current_subgoals = self._current_subgoals
         self._replan_subgoal_count += 1
         if self._replan_subgoal_count > self._replan_subgoal_interval:
-            _, self._current_subgoals, self._subgoal_dist = self._solver.get_solution_actions_and_subgoals()
+            _, self._current_subgoals, self._subgoal_dist = self._get_solver().get_solution_actions_and_subgoals()
             self._replan_subgoal_count = 0
             
             # do not allow backtracking to farm subgoals
