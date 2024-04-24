@@ -34,12 +34,12 @@ class MinigridManager:
         self._subgoal_init_dist = float('inf')
 
     def has_solution(self):
+        if self._solver is None:
+            self._solver = MinigridSolver(self._minigrid)
         _, _, dist = self._solver.get_solution_actions_and_subgoals()
         return dist < 10000
 
     def subgoal_rewards(self, arena, dense=False):
-        if not self._use_subgoal_rewards or self._max_subgoals == 0:
-            return 0
         
         current_subgoals = self._current_subgoals
         self._replan_subgoal_count += 1
@@ -51,6 +51,8 @@ class MinigridManager:
             self._max_subgoals = min(len(self._current_subgoals), self._max_subgoals)
             # self._current_subgoals = self._current_subgoals[-self._max_subgoals:]
 
+        if not self._use_subgoal_rewards or self._max_subgoals == 0:
+            return 0
         if len(current_subgoals) == 0:
             return 0
         
