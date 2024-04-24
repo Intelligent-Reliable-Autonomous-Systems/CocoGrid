@@ -99,10 +99,6 @@ elif args.gym:
             up += 1
         if keys[pygame.K_n] or keys[pygame.K_SPACE]:
             grab = 1
-        if keys[pygame.K_ESCAPE]:
-            return 'escape'
-        if keys[pygame.K_r]:
-            return 'reset'
         return np.array([grab, -up, right])
 
     obs, _ = env.reset()
@@ -112,28 +108,29 @@ elif args.gym:
     num_steps = 0
     reward_sum = 0
     num_episodes = 0
+    is_holding_reset = False
     while True:
         keys = key.get_pressed()
         if keys[pygame.K_ESCAPE]:
             print('Cumulative reward (to this point):', reward_sum)
             print('Manually terminated')
             break
-        action = env.unwrapped.action_space.sample()
-        manual_action = get_action()
-        if type(manual_action) == str:
-            if manual_action == 'escape':
-                break
-            if manual_action == 'reset':
-                trunc = True
+        if keys[pygame.K_r] and not is_holding_reset:
+            trunc = True
+            is_holding_reset = True
         else:
+            if not keys[pygame.K_r]:
+                is_holding_reset = False
+            action = env.unwrapped.action_space.sample()
+            manual_action = get_action()
             action[:3] = manual_action
 
-            # def threshold_action(x):
-            #     return np.sign(x) * (abs(x) > 0.1)
-            # action[1] = threshold_action(obs[1] - obs[3])
-            # action[2] = -threshold_action(obs[0] - obs[2])
-            # action[1] = 1 if obs[1] > obs[3] else -1
-            # action[2] = 1 if obs[0] < obs[2] else -1
+            def threshold_action(x):
+                return np.sign(x) * (abs(x) > 0.1)
+            action[1] = threshold_action(obs[1] - obs[3])
+            action[2] = -threshold_action(obs[0] - obs[2])
+            action[1] = 1 if obs[1] > obs[3] else -1
+            action[2] = 1 if obs[0] < obs[2] else -1
             # print(action)
 
 
@@ -157,6 +154,7 @@ elif args.gym:
             env.reset()
             reward_sum = 0
             num_steps = 0
+            term = trunc = False
 
 elif args.minigrid:
     import gymnasium as gym

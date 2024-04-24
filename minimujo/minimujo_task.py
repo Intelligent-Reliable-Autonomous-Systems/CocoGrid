@@ -153,7 +153,7 @@ class MinimujoTask(composer.Task):
         return self._minimujo_arena
 
     def initialize_episode_mjcf(self, unused_random_state):
-        self._minimujo_arena.regenerate()
+        self._minimujo_arena.initialize_arena_mjcf()
 
     def _respawn(self, physics, random_state):
         self._walker.reinitialize_pose(physics, random_state)

@@ -30,10 +30,9 @@ class MinigridSolver:
 
     def __init__(self, minigrid) -> None:
         self.minigrid = minigrid
-        self.grid = minigrid.grid
-        if not isinstance(self.grid, GridWrapper):
-            self.grid = GridWrapper(self.grid)
-            self.minigrid.grid = self.grid
+        self.minigrid.grid = minigrid.grid
+        if not isinstance(self.minigrid.grid, GridWrapper):
+            self.minigrid.grid = GridWrapper(self.minigrid.grid)
         c, r = self.minigrid.agent_pos
         agent_flat_idx = self.get_flat_idx(r, c)
         self.agent = AgentDummy(self.minigrid.agent_pos, agent_flat_idx)
@@ -60,7 +59,9 @@ class MinigridSolver:
                 if neighbor == agent_pos:
                     path_back = self.get_path_back(grid_to_from, start_idx, neighbor)
                     connected.append((self.agent, dist + 1, path_back))
-                objects = self.grid.get_all(neighbor)
+                # neighbor_row, neighbor_col = self.get_row_col(neighbor)
+                # objects = self.minigrid.grid.get_all(neighbor) if isinstance(self.minigrid.grid, GridWrapper) else self.minigrid.grid.get(neighbor_col, neighbor_row)
+                objects = self.get_world_objects(neighbor)
                 is_blocking = False
                 for world_obj in objects:
                     if type(world_obj) in MinigridSolver.object_types:
@@ -75,10 +76,20 @@ class MinigridSolver:
         return connected
     
     def get_flat_idx(self, row, col):
-        return row * self.grid.width + col
+        return row * self.minigrid.grid.width + col
     
     def get_row_col(self, idx):
-        return idx // self.grid.width, idx % self.grid.width
+        return idx // self.minigrid.grid.width, idx % self.minigrid.grid.width
+    
+    def get_world_objects(self, neighbor):
+        if isinstance(self.minigrid.grid, GridWrapper):
+            return self.minigrid.grid.get_all(neighbor)
+        else:
+            neighbor_row, neighbor_col = self.get_row_col(neighbor)
+            world_obj = self.minigrid.grid.get(neighbor_col, neighbor_row)
+            if world_obj is None:
+                return []
+            return [world_obj]
     
     def get_grid_dir(self, from_idx, to_idx):
         diff = to_idx - from_idx
@@ -96,13 +107,13 @@ class MinigridSolver:
             return 3
 
     def get_neighbors(self, idx, dir=0):
-        width = self.grid.width
+        width = self.minigrid.grid.width
         row, col = self.get_row_col(idx)
         neighbors = [None, None, None, None]
         if col + 1 < width:
             # right
             neighbors[0] = idx+1
-        if row + 1 < self.grid.height:
+        if row + 1 < self.minigrid.grid.height:
             # down
             neighbors[1] = idx+width
         if col - 1 >= 0:
@@ -128,9 +139,9 @@ class MinigridSolver:
     
     def get_all_connections(self):
         objects = []
-        for i in range(len(self.grid.grid)):
+        for i in range(len(self.minigrid.grid.grid)):
             r, c = self.get_row_col(i)
-            for world_obj in self.grid.get_all(i):
+            for world_obj in self.get_world_objects(i):
                 if type(world_obj) in MinigridSolver.object_types:
                     # c, r = world_obj.cur_pos
                     world_obj.cur_pos = c, r
@@ -264,7 +275,7 @@ class MinigridSolver:
             if i > 0:
                 path = path[0:]
             for agent_idx in path[::-1]:
-                target_pos = agent_idx % self.grid.width, agent_idx // self.grid.height
+                target_pos = agent_idx % self.minigrid.grid.width, agent_idx // self.minigrid.grid.height
                 goal_func = MinigridGoal(target_pos)
                 subgoals.append(goal_func)
             
@@ -292,7 +303,7 @@ class MinigridSolver:
     def get_solution_actions_and_subgoals(self):
         solution_return = self.get_solution()
         if solution_return is None:
-            return [], [], 0
+            return [], [], float('inf')
         solution, distance = solution_return
         actions = self.get_actions_from_solution(solution)
         subgoals = self.get_subgoals_from_solution(solution)
@@ -354,7 +365,7 @@ if __name__ == "__main__":
     while max_steps > 0:
         actions, subgoals = solver.get_solution_actions_and_subgoals()
         col, row = tuple(minigrid_env.agent_pos)
-        agent_idx = row * solver.grid.width + col
+        agent_idx = row * solver.minigrid.grid.width + col
         
         action_id = MinigridSolver.ACTION_MAP[actions[0]]
         _, _, terminated, truncated, _ = minigrid_env.step(action_id)

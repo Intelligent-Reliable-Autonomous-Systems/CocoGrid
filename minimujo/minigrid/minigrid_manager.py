@@ -10,17 +10,19 @@ class MinigridManager:
     def __init__(self, minigrid, object_entities, use_subgoal_rewards=False):
         self._minigrid = minigrid
         self._objects = object_entities
-        self._grid = GridWrapper(self._minigrid.grid)
-        self._minigrid.grid = self._grid
 
         self._use_subgoal_rewards = use_subgoal_rewards
         self._solver = None
-        if use_subgoal_rewards:
-            self._solver = MinigridSolver(minigrid)
         
         self.reset()
 
     def reset(self):
+        self._grid = GridWrapper(self._minigrid.grid)
+        self._minigrid.grid = self._grid
+
+        if self._use_subgoal_rewards:
+            self._solver = MinigridSolver(self._minigrid)
+
         self._replan_subgoal_interval = 10
         self._replan_subgoal_count = self._replan_subgoal_interval
         self._allow_subgoal_skips = False
@@ -29,7 +31,11 @@ class MinigridManager:
         self._max_subgoals = np.inf
         self._last_dist = None
         self._subgoal_dist = 0
-        self._subgoal_init_dist = 0
+        self._subgoal_init_dist = float('inf')
+
+    def has_solution(self):
+        _, _, dist = self._solver.get_solution_actions_and_subgoals()
+        return dist < 10000
 
     def subgoal_rewards(self, arena, dense=False):
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
@@ -74,6 +80,9 @@ class MinigridManager:
             if self._last_dist == None:
                 self._last_dist = total_distance
                 self._subgoal_init_dist = total_distance
+                if self._subgoal_init_dist == 0:
+                    print("init dist was zero", total_distance, goal_rew, self._subgoal_dist)
+                    self._subgoal_init_dist = float('inf')
             diff = (self._last_dist - total_distance) / self._subgoal_init_dist
             self._last_dist = total_distance
             return diff
@@ -123,7 +132,6 @@ class MinigridManager:
             r, t = self.move_agent(*walker_pos)
             reward += r
             terminated = terminated or t
-            # print(str(self._minigrid))
 
         for goal in self._objects[Goal]:
             entity = goal['entity']
@@ -141,7 +149,7 @@ class MinigridManager:
         entity = grabbable['entity']
         miniobj = grabbable['mini_obj']
         mg_col, mg_row = grabbable['mini_pos']
-        entity_col, entity_row = arena.world_to_minigrid_position(entity.position) if not entity.is_grabbed else (-1, -1)
+        entity_row, entity_col = arena.world_to_minigrid_position(entity.position) if not entity.is_grabbed else (-1, -1)
         if entity_col < -1 or entity_row < -1:
             return reward, terminated
 

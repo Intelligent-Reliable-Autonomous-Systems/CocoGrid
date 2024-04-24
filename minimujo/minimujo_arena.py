@@ -14,9 +14,11 @@ from minimujo.entities.contact_tile_entity import ContactTileEntity
 from minimujo.entities.door_entity import DoorEntity
 from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
+from minimujo.maze_arena import MazeArena
 from minimujo.minigrid.minigrid_manager import MinigridManager
+from minimujo.utils import get_labmaze_from_minigrid
 
-class MinimujoArena(mazes.MazeWithTargets):
+class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
             random_spawn=False, spawn_padding=0.3, use_subgoal_rewards=False, dense_rewards=False):
         """Initializes goal-directed minigrid task.
@@ -33,22 +35,15 @@ class MinimujoArena(mazes.MazeWithTargets):
         self.random_spawn = random_spawn
         self.spawn_padding = spawn_padding
 
-        maze_width = self._minigrid.grid.width
-        walls = ['*' if type(s) is Wall else ' ' for s in self._minigrid.grid.grid]
-        if self._minigrid.agent_pos is not None:
-            c, r = self._minigrid.agent_pos
-            walls[r * maze_width + c] = labdefaults.SPAWN_TOKEN
-        labmaze_matrix = [walls[i:i+maze_width] for i in range(0, len(walls), maze_width)]
-        labmaze_str = '\n'.join([''.join(row) for row in labmaze_matrix]) + '\n'
-
-        self._labmaze = labmaze.FixedMazeWithRandomGoals(labmaze_str)
+        labmaze = get_labmaze_from_minigrid(self._minigrid)
         
         super().__init__(
-            maze=self._labmaze,
+            maze=labmaze,
             xy_scale=xy_scale,
             z_height=z_height,
             name='minimujo'
         )
+        self._already_initialized = True # don't regenerate maze the first time
         
         self._grabber = Grabber()
         self.attach(self._grabber)
@@ -98,7 +93,7 @@ class MinimujoArena(mazes.MazeWithTargets):
                     'mini_obj': miniObj
                 })
 
-        self.setDoorDirections(labmaze_matrix)
+        self.setDoorDirections(self._maze.entity_layer)
 
         self._walker_position = np.array([0,0,0])
         self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
@@ -122,6 +117,11 @@ class MinimujoArena(mazes.MazeWithTargets):
             elif c + 1 < len(charMatrix) and charMatrix[r][c+1] == '*':
                 dir = 3
             door['dir'] = dir
+
+    def initialize_arena_mjcf(self, random_state=None):
+        self._minigrid.reset()
+        self._maze = get_labmaze_from_minigrid(self._minigrid)
+        self.regenerate()
     
     def initialize_arena(self, physics, random_state):
         if self.random_spawn:
@@ -152,8 +152,9 @@ class MinimujoArena(mazes.MazeWithTargets):
         self._walker_position = self._spawn_positions[0]
 
         self._minigrid_manager.reset()
+        self._minigrid_manager.sync_minigrid(self)
         self._terminated = False
-        self._extrinsic_reward = 0    
+        self._extrinsic_reward = 0
 
     def initialize_episode_mjcf(self, random_state):
         super().initialize_episode_mjcf(random_state)
@@ -170,7 +171,6 @@ class MinimujoArena(mazes.MazeWithTargets):
     def before_step(self, physics, random_state):
         if self._walker:
             self._walker_position = self._get_walker_pos(physics)[:3]
-            # print('position', self._walker_position)
         if not self._terminated:
             reward, terminated = self._minigrid_manager.sync_minigrid(self)
             self._terminated = terminated
@@ -183,26 +183,24 @@ class MinimujoArena(mazes.MazeWithTargets):
     
     @property
     def walker_grid_position(self):
-        return self.world_to_minigrid_position(self.walker_position)
+        row, col = self.world_to_minigrid_position(self.walker_position)
+        return col, row
     
     @property
     def walker_grid_continuous_position(self):
         return self.world_to_minigrid_continuous_position(self.walker_position)
     
     def world_to_minigrid_position(self, position):
-        col, row = self.world_to_grid_positions([position])[0]
+        row, col = self.world_to_grid_positions([position])[0]
         # col, row are integers in center of tile, so need to round to nearest integer. e.g -.6->1, 1.4->1
         return int(row + 1/2), int(col + 1/2)
     
     def world_to_minigrid_continuous_position(self, position):
-        col, row = self.world_to_grid_positions([position])[0]
-        # col, row are integers in center of tile, so need to round to nearest integer. e.g -.6->1, 1.4->1
-        return row, col
+        return self.world_to_grid_positions([position])[0]
     
     def minigrid_to_world_position(self, row, col):
-        position = self.grid_to_world_positions([(row, col)])[0]
         # returns center position of tile
-        return position
+        return self.grid_to_world_positions([(row, col)])[0]
     
     def maze_bounds(self):
         x_low = self._xy_scale * -self._x_offset
@@ -227,7 +225,7 @@ class MinimujoArena(mazes.MazeWithTargets):
             for test_x, test_y in test_coords:
                 row, col = self.world_to_minigrid_position((test_x, test_y, 0))
                 try:
-                    if self._minigrid.grid.get(row, col) is not None:
+                    if self._minigrid.grid.get(col, row) is not None:
                         # is overlapping something
                         is_valid = False
                         break
@@ -235,6 +233,11 @@ class MinimujoArena(mazes.MazeWithTargets):
                     # was out of bounds
                     is_valid = False
                     break
+            if is_valid:
+                row, col = self.world_to_minigrid_position((x, y, 0))
+                self._minigrid.agent_pos = (col, row)
+                if not self._minigrid_manager.has_solution():
+                    is_valid = False
             if is_valid:
                 return np.array([x, y, 0])
         
