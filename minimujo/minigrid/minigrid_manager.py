@@ -73,7 +73,7 @@ class MinigridManager:
             subgoal = current_subgoals[0]
             goal_rew = subgoal(self._minigrid, dense=dense, walker_pos=walker_pos)
             if goal_rew > 0:
-                print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
+                # print('Completed subgoal', subgoal, 'next:', current_subgoals[1] if len(current_subgoals) > 1 else '')
                 current_subgoals.pop(0)
                 goal_rew = max(0, (self._max_subgoals - len(current_subgoals)))
                 self._max_subgoals = min(len(current_subgoals), self._max_subgoals)

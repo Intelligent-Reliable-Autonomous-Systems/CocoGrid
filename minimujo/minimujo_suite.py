@@ -12,6 +12,7 @@ from minimujo.custom_minigrid import register_custom_minigrid
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.minimujo_task import MinimujoTask
 from minimujo.walkers.square import Square
+from minimujo.walkers.rolling_ball import RollingBallWithHead
 
 def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, random=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
@@ -25,7 +26,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
             task_kwargs[key] = environment_kwargs.pop(key)
 
     if walker_type == 'rolling_ball' or walker_type == 'ball':
-        walker = jumping_ball.RollingBallWithHead(initializer=tuple())
+        walker = RollingBallWithHead(initializer=tuple())
     elif walker_type == 'cmu_humanoid' or walker_type == 'human' or walker_type == 'humanoid':
         walker = cmu_humanoid.CMUHumanoidPositionControlledV2020(
             observable_options={'egocentric_camera': dict(enabled=True)})
@@ -65,14 +66,16 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     )
     return env
 
-def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', time_limit=20, random=None, env_params=None, track_position=False):
+def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', time_limit=20, random=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
     return DMCGym(
         domain=domain, 
         task=task, 
         task_kwargs=dict(walker_type=walker_type, time_limit=time_limit, random=random), 
-        environment_kwargs=env_params, 
+        environment_kwargs=env_kwargs, 
         image_observation_format=image_observation_format,
         rendering=None, 
+        render_width=render_width,
+        render_mode=render_mode,
         track_position=track_position)
 
 SUITE = containers.TaggedTasks()

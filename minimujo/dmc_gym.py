@@ -152,8 +152,8 @@ class DMCGym(Env):
         task_kwargs={},
         environment_kwargs={},
         image_observation_format='0-255',
+        render_mode='rgb_array',
         rendering='egl',
-        render_height=64,
         render_width=64,
         render_camera_id=0,
         track_position=False
@@ -175,8 +175,8 @@ class DMCGym(Env):
         self.is_image_obs = 'top_camera' in self._env._task.observation_types
 
         # placeholder to allow built in gymnasium rendering
-        self.render_mode = "rgb_array"
-        self.render_height = render_height
+        self.render_mode = render_mode
+        self.render_height = render_width
         self.render_width = render_width
         self.render_camera_id = render_camera_id
 

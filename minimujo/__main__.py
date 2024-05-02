@@ -77,7 +77,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, env_params={'observation_type': args.obs_type, 'reward_type': args.reward_type, 'xy_scale': args.scale, 'random_spawn': args.random_spawn, 'random_rotation': args.random_rotate}, track_position=args.track)
+    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     env = HumanRendering(env)
@@ -125,12 +125,12 @@ elif args.gym:
             manual_action = get_action()
             action[:3] = manual_action
 
-            def threshold_action(x):
-                return np.sign(x) * (abs(x) > 0.1)
-            action[1] = threshold_action(obs[1] - obs[3])
-            action[2] = -threshold_action(obs[0] - obs[2])
-            action[1] = 1 if obs[1] > obs[3] else -1
-            action[2] = 1 if obs[0] < obs[2] else -1
+            # def threshold_action(x):
+            #     return np.sign(x) * (abs(x) > 0.1)
+            # action[1] = threshold_action(obs[1] - obs[3])
+            # action[2] = -threshold_action(obs[0] - obs[2])
+            # action[1] = 1 if obs[1] > obs[3] else -1
+            # action[2] = 1 if obs[0] < obs[2] else -1
             # print(action)
 
 
