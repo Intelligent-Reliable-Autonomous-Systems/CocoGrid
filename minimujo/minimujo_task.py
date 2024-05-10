@@ -278,6 +278,8 @@ class MinimujoTask(composer.Task):
         return extrinsic + intrinsic
     
     def _subgoal_cost(self, extrinsic, intrinsic):
-        if extrinsic > 0 or intrinsic > 0:
-            self._steps_since_last_subgoal = 0
-        return extrinsic + np.exp(-self._subgoal_reward_decay * self._steps_since_last_subgoal) - 1
+        # if extrinsic > 0 or intrinsic > 0:
+        #     self._steps_since_last_subgoal = 0
+        # return extrinsic + np.exp(-self._subgoal_reward_decay * self._steps_since_last_subgoal) - 1
+        manager = self._minimujo_arena._minigrid_manager
+        return -len(manager._current_subgoals) / manager._subgoal_init_dist

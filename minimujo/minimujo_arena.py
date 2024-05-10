@@ -16,7 +16,7 @@ from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
 from minimujo.maze_arena import MazeArena
 from minimujo.minigrid.minigrid_manager import MinigridManager
-from minimujo.utils import get_labmaze_from_minigrid
+from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,

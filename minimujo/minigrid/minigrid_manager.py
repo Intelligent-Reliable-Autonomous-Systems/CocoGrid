@@ -44,7 +44,6 @@ class MinigridManager:
 
     def subgoal_rewards(self, arena, dense=False):
         
-        current_subgoals = self._current_subgoals
         self._replan_subgoal_count += 1
         if self._replan_subgoal_count > self._replan_subgoal_interval:
             _, self._current_subgoals, self._subgoal_dist = self._get_solver().get_solution_actions_and_subgoals()
@@ -52,7 +51,11 @@ class MinigridManager:
             
             # do not allow backtracking to farm subgoals
             self._max_subgoals = min(len(self._current_subgoals), self._max_subgoals)
-            # self._current_subgoals = self._current_subgoals[-self._max_subgoals:]
+            self._current_subgoals = self._current_subgoals[-self._max_subgoals:]
+            self._subgoal_dist = len(self._current_subgoals)
+            if (not dense) and self._subgoal_init_dist > 100000:
+                self._subgoal_init_dist = len(self._current_subgoals)
+        current_subgoals = self._current_subgoals
 
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
             return 0
@@ -78,8 +81,10 @@ class MinigridManager:
                 goal_rew = max(0, (self._max_subgoals - len(current_subgoals)))
                 self._max_subgoals = min(len(current_subgoals), self._max_subgoals)
                 self._subgoal_dist -= 1
-                if dense and len(current_subgoals) == 0:
-                    return (self._last_dist) / self._subgoal_init_dist
+                if dense:
+                    if len(current_subgoals) == 0:
+                        return (self._last_dist) / self._subgoal_init_dist
+                    goal_rew = current_subgoals[0](self._minigrid, dense=True, walker_pos=walker_pos)
         if dense:
             total_distance = (-goal_rew) + (self._subgoal_dist - 1)
             if self._last_dist == None:
@@ -89,6 +94,8 @@ class MinigridManager:
                     print("init dist was zero", total_distance, goal_rew, self._subgoal_dist)
                     self._subgoal_init_dist = float('inf')
             diff = (self._last_dist - total_distance) / self._subgoal_init_dist
+            if diff < -0.05:
+                print('aberation', goal_rew, total_distance, self._last_dist, self._subgoal_dist)
             self._last_dist = total_distance
             return diff
         return goal_rew

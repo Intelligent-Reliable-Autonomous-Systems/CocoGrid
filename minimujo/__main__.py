@@ -1,6 +1,7 @@
 import argparse
 
 from minimujo import minimujo_suite
+from minimujo.utils.obs_visualize import ObsVisualize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
@@ -80,6 +81,7 @@ elif args.gym:
     env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
+    env = ObsVisualize(env)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
@@ -133,6 +135,26 @@ elif args.gym:
             # action[2] = 1 if obs[0] < obs[2] else -1
             # print(action)
 
+            def threshold_angle(x):
+                if abs(x) < 0.1:
+                    return 0
+                elif abs(x) < 0.5:
+                    return np.sign(x) * 0.5
+                else:
+                    return np.sign(x) * 0.8
+            pos = obs[:2]
+            goal = np.array([0,-2])
+            goal = obs[2:4]
+            diff = (goal - pos)
+            target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
+            actual_angle = obs[5]
+            # print(target_angle, actual_angle)
+            # print(pos, goal, target_angle)
+            # print(obs)
+            # if action[0] > 0:
+            #     action[2] = threshold_angle(target_angle - actual_angle)
+            #     action[1] = -0.5
+
 
             obs, rew, term, trunc, info = env.step(action)
             reward_sum += rew
@@ -155,6 +177,7 @@ elif args.gym:
             reward_sum = 0
             num_steps = 0
             term = trunc = False
+    print(env.unwrapped.range_mapping)
 
 elif args.minigrid:
     import gymnasium as gym

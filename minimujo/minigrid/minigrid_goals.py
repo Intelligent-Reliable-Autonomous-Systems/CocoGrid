@@ -24,10 +24,11 @@ class MinigridGoal:
             x, y = self.agent_pos
             box = x - 1/2, y - 1/2, x + 1/2, y + 1/2
             return -distance_to_box_2d(walker_pos, box)
+            # return -abs(walker_pos[0] - y)
         return 0
     
 def distance_to_box_2d(point, box):
-    px, py = point
+    py, px = point
     x1, y1, x2, y2 = box  # Assuming box is defined as [x1, y1, x2, y2]
 
     # Check if the point is outside the box
