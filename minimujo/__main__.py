@@ -16,11 +16,12 @@ parser.add_argument('--img-obs-format', default='0-255', help="What format shoul
 parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="What type of reward should the environment emit? Options are 'sparse', 'sparse_cost', 'subgoal', 'subgoal_cost'")
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
+parser.add_argument('--timesteps', '-t', type=int, default=200, help="The maximum number of timesteps before truncating")
 parser.add_argument('--random-spawn', action='store_true', help='The walker is randomly positioned on reset')
 parser.add_argument('--random-rotate', action='store_true', help='The walker is randomly oriented on reset')
-parser.add_argument('--track', '-t', action='store_true', help='when rendering gym, adds a trail behind the walker')
+parser.add_argument('--track', action='store_true', help='when rendering gym, adds a trail behind the walker')
 parser.add_argument('--seed', type=int, default=None, help='The random seed to be applied')
-parser.add_argument('--episodes', type=int, default=1, help="The number of episodes to run the gym env for")
+parser.add_argument('--episodes', type=int, default=1000, help="The number of episodes to run the gym env for")
 
 parser.add_argument('--print-reward', action='store_true', help='Prints the reward and cumulative reward to the console')
 parser.add_argument('--print-obs', action='store_true', help='Prints the observation to the console')
@@ -78,10 +79,10 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track)
+    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
-    env = ObsVisualize(env)
+    # env = ObsVisualize(env)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
@@ -135,19 +136,19 @@ elif args.gym:
             # action[2] = 1 if obs[0] < obs[2] else -1
             # print(action)
 
-            def threshold_angle(x):
-                if abs(x) < 0.1:
-                    return 0
-                elif abs(x) < 0.5:
-                    return np.sign(x) * 0.5
-                else:
-                    return np.sign(x) * 0.8
-            pos = obs[:2]
-            goal = np.array([0,-2])
-            goal = obs[2:4]
-            diff = (goal - pos)
-            target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
-            actual_angle = obs[5]
+            # def threshold_angle(x):
+            #     if abs(x) < 0.1:
+            #         return 0
+            #     elif abs(x) < 0.5:
+            #         return np.sign(x) * 0.5
+            #     else:
+            #         return np.sign(x) * 0.8
+            # pos = obs[:2]
+            # goal = np.array([0,-2])
+            # goal = obs[2:4]
+            # diff = (goal - pos)
+            # target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
+            # actual_angle = obs[5]
             # print(target_angle, actual_angle)
             # print(pos, goal, target_angle)
             # print(obs)

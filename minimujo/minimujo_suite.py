@@ -14,7 +14,7 @@ from minimujo.minimujo_task import MinimujoTask
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 
-def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, random=None, environment_kwargs=None):
+def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, random=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
     highEnv.reset(seed=random)
 
@@ -49,11 +49,15 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
 
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
 
+    PHYSICS_TIMESTEP=0.005
+    CONTROL_TIMESTEP=0.03
+    time_limit = CONTROL_TIMESTEP * timesteps - 0.00001 # subtrack a tiny amount due to precision error
+
     task = MinimujoTask(
         walker=walker,
         minimujo_arena=arena,
-        physics_timestep=0.005,
-        control_timestep=0.03,
+        physics_timestep=PHYSICS_TIMESTEP,
+        control_timestep=CONTROL_TIMESTEP,
         contact_termination=False,
         **task_kwargs
     )
@@ -66,11 +70,11 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', time_limit=20, ran
     )
     return env
 
-def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', time_limit=20, random=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
+def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, random=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
     return DMCGym(
         domain=domain, 
         task=task, 
-        task_kwargs=dict(walker_type=walker_type, time_limit=time_limit, random=random), 
+        task_kwargs=dict(walker_type=walker_type, timesteps=timesteps, random=random), 
         environment_kwargs=env_kwargs, 
         image_observation_format=image_observation_format,
         rendering=None, 

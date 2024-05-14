@@ -50,10 +50,61 @@ class UMazeEnv(MiniGridEnv):
         # Place a goal square in the bottom-right corner
         self.put_obj(Goal(), 1, 1)
 
-CUSTOM_ENVS = [UMazeEnv]
+class RandomCornerEnv(MiniGridEnv):
+    def __init__(
+        self,
+        size=7,
+        max_steps: int = None,
+        **kwargs,
+    ):
+
+        mission_space = MissionSpace(mission_func=self._gen_mission)
+
+        if max_steps is None:
+            max_steps = 4 * size**2
+
+        super().__init__(
+            mission_space=mission_space,
+            grid_size=size,
+            see_through_walls=True,  # Set this to True for maximum speed
+            max_steps=max_steps,
+            **kwargs,
+        )
+
+    @staticmethod
+    def _gen_mission():
+        return "navigate an empty room to a goal in a random corner"
+    
+    def _gen_grid(self, width, height):
+        assert width % 2 == 1 and height % 2 == 1  # odd size
+
+        # Create an walled empty grid
+        self.grid = Grid(width, height)
+        self.grid.wall_rect(0, 0, width, height)
+
+        # Place the agent in the middle
+        self.agent_pos = np.array(((width) // 2, (height) // 2))
+        self.agent_dir = 0
+
+        # Place a goal square in the bottom-right corner
+        corner = np.random.choice(4)
+        if corner == 0:
+            self.put_obj(Goal(), 1, 1)
+        elif corner == 1:
+            self.put_obj(Goal(), 1, height - 2)
+        elif corner == 2:
+            self.put_obj(Goal(), width - 2, 1)
+        else:
+            self.put_obj(Goal(), width - 2, height - 2)
+
+CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv]
 
 def register_custom_minigrid():
     register(
         id='MiniGrid-UMaze-v0',
         entry_point='minimujo.custom_minigrid:UMazeEnv'
+    )
+    register(
+        id='MiniGrid-RandomCorner-v0',
+        entry_point='minimujo.custom_minigrid:RandomCornerEnv'
     )
