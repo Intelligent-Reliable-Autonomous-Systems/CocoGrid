@@ -9,7 +9,6 @@ from minimujo.minigrid.minigrid_solver import MinigridSolver
 class MinigridManager:
     def __init__(self, minigrid, object_entities, use_subgoal_rewards=False):
         self._minigrid = minigrid
-        self._objects = object_entities
 
         self._use_subgoal_rewards = use_subgoal_rewards
         self._solver = None
@@ -21,7 +20,7 @@ class MinigridManager:
         self._minigrid.grid = self._grid
 
         if self._use_subgoal_rewards:
-            self._solver = self._get_solver()
+            self._solver = self._get_solver(cached=False)
 
         self._replan_subgoal_interval = 10
         self._replan_subgoal_count = self._replan_subgoal_interval
@@ -33,8 +32,8 @@ class MinigridManager:
         self._subgoal_dist = 0
         self._subgoal_init_dist = float('inf')
 
-    def _get_solver(self):
-        if self._solver is None:
+    def _get_solver(self, cached=True):
+        if cached and self._solver is None:
             self._solver = MinigridSolver(self._minigrid)
         return self._solver
 
@@ -83,6 +82,7 @@ class MinigridManager:
                 self._subgoal_dist -= 1
                 if dense:
                     if len(current_subgoals) == 0:
+                        print('returning', self._last_dist)
                         return (self._last_dist) / self._subgoal_init_dist
                     goal_rew = current_subgoals[0](self._minigrid, dense=True, walker_pos=walker_pos)
         if dense:
@@ -104,13 +104,20 @@ class MinigridManager:
         if len(self._current_subgoals) == 0:
             return (0, 0)
         return self._current_subgoals[0].agent_pos
+    
+    def get_final_goal_pos(self):
+        if len(self._current_subgoals) == 0:
+            return (0, 0)
+        return self._current_subgoals[-1].agent_pos
 
     def sync_minigrid(self, arena):
         reward = 0
         terminated = False
 
+        entities = arena._mini_entity_map
+
         walker_pos = arena.walker_grid_position
-        for door in self._objects[Door]:
+        for door in entities[Door]:
             entity = door['entity']
             miniobj = door['mini_obj']
             col, row = door['mini_pos']
@@ -125,17 +132,17 @@ class MinigridManager:
                 reward += r
                 terminated = terminated or t
 
-        for ball in self._objects[Ball]:
+        for ball in entities[Ball]:
             r, t = self.handle_grabbable(ball, arena)
             reward += r
             terminated = terminated or t
 
-        for box in self._objects[Box]:
+        for box in entities[Box]:
             r, t = self.handle_grabbable(box, arena)
             reward += r
             terminated = terminated or t
 
-        for key in self._objects[Key]:
+        for key in entities[Key]:
             r, t = self.handle_grabbable(key, arena)
             reward += r
             terminated = terminated or t
@@ -145,7 +152,7 @@ class MinigridManager:
             reward += r
             terminated = terminated or t
 
-        for goal in self._objects[Goal]:
+        for goal in entities[Goal]:
             entity = goal['entity']
             miniobj = goal['mini_obj']
             col, row = goal['mini_pos']

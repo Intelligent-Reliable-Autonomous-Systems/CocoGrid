@@ -9,7 +9,7 @@ import numpy as np
 class Square(Walker):
 
     def _build(self, *args, **kwargs):
-        super()._build(*args, **kwargs)
+        super()._build(*args, initializer=tuple(), **kwargs)
 
         asset_path = os.path.join(os.path.dirname(__file__), 'assets/square.xml')
         self._mjcf_root = mjcf.from_path(asset_path)
@@ -51,6 +51,10 @@ class Square(Walker):
     @composer.cached_property
     def root_body(self):
         return self._mjcf_root.find('body', 'square_body')
+    
+    @composer.cached_property
+    def root_joints(self):
+        return self._root_joints
     
     @composer.cached_property
     def observable_joints(self):

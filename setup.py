@@ -43,5 +43,10 @@ setup(
     ],
     package_data={
         'minimujo.entities.assets': ['*.xml']
-    }
+    },
+    entry_points={
+        'console_scripts': [
+            'minimujo=minimujo.__main__',
+        ],
+    },
 )

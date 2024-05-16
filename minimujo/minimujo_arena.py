@@ -48,6 +48,27 @@ class MinimujoArena(MazeArena):
         self._grabber = Grabber()
         self.attach(self._grabber)
 
+        self.create_entity_mjcf()
+
+        self.setDoorDirections(self._maze.entity_layer)
+
+        self._walker_position = np.array([0,0,0])
+        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
+        self._terminated = False
+        self._extrinsic_reward = 0
+        self._dense_rewards = dense_rewards
+
+    def _build_observables(self):
+        return MinimujoObservables(self, self.cam_width, self.cam_height)
+    
+    def create_entity_mjcf(self):
+        if hasattr(self, '_mini_entity_map') and isinstance(self._mini_entity_map, dict):
+            for entity_list in self._mini_entity_map.values():
+                for entry in entity_list:
+                    entity = entry['entity']
+                    if isinstance(entity, composer.Entity):
+                        entity.detach()
+
         self._mini_entity_map = {
             Ball: [],
             Box: [],
@@ -67,7 +88,7 @@ class MinimujoArena(MazeArena):
                 color = miniObj.color
                 world_pos = self.grid_to_world_positions([(row,col)])[0]
                 if key is Door:
-                    entity = DoorEntity(color=color, is_locked=miniObj.is_locked, xy_scale=xy_scale)
+                    entity = DoorEntity(color=color, is_locked=miniObj.is_locked, xy_scale=self.xy_scale)
                     self.attach(entity)
                 elif key is Key:
                     entity = KeyEntity(self._grabber, color=color)
@@ -79,10 +100,10 @@ class MinimujoArena(MazeArena):
                     entity = BoxEntity(self._grabber, color=color)
                     entity.create_root_joints(self.attach(entity))
                 elif key is Goal:
-                    entity = ContactTileEntity(color='goal_green', xy_scale=xy_scale)
+                    entity = ContactTileEntity(color='goal_green', xy_scale=self.xy_scale)
                     self.attach(entity)
                 elif key is Lava:
-                    entity = ContactTileEntity(color='orange', xy_scale=xy_scale)
+                    entity = ContactTileEntity(color='orange', xy_scale=self.xy_scale)
                     self.attach(entity)
                 else:
                     entity = None
@@ -92,17 +113,6 @@ class MinimujoArena(MazeArena):
                     'mini_pos': (col, row), 
                     'mini_obj': miniObj
                 })
-
-        self.setDoorDirections(self._maze.entity_layer)
-
-        self._walker_position = np.array([0,0,0])
-        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
-        self._terminated = False
-        self._extrinsic_reward = 0
-        self._dense_rewards = dense_rewards
-
-    def _build_observables(self):
-        return MinimujoObservables(self, self.cam_width, self.cam_height)
 
     def setDoorDirections(self, charMatrix):
         for door in self._mini_entity_map[Door]:
@@ -119,9 +129,16 @@ class MinimujoArena(MazeArena):
             door['dir'] = dir
 
     def initialize_arena_mjcf(self, random_state=None):
-        self._minigrid.reset()
+        if not self._already_initialized:
+            self._minigrid.reset()
         self._maze = get_labmaze_from_minigrid(self._minigrid)
         self.regenerate()
+        
+        if not self._already_initialized:
+            self.create_entity_mjcf()
+            self.setDoorDirections(self._maze.entity_layer)
+            self.register_walker(self._walker, self._get_walker_pos)
+        self._already_initialized = False
     
     def initialize_arena(self, physics, random_state):
         if self.random_spawn:

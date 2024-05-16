@@ -100,13 +100,23 @@ class MinimujoTask(composer.Task):
             self._task_observables.update({'abs_vel': absolute_velocity})
         if 'goal' in self.observation_types:
             def get_goal_pos(physics):
-                col, row = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
+                col, row = self._minimujo_arena._minigrid_manager.get_final_goal_pos()
                 return self._minimujo_arena.minigrid_to_world_position(row, col)[:2]
                 # return np.array(goal_pos)
             goal_position = observable_lib.Generic(get_goal_pos)
             goal_position.enabled = True
 
             self._task_observables.update({'goal_pos': goal_position})
+
+        if 'subgoal' in self.observation_types:
+            def get_goal_pos(physics):
+                col, row = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
+                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2]
+                # return np.array(goal_pos)
+            goal_position = observable_lib.Generic(get_goal_pos)
+            goal_position.enabled = True
+
+            self._task_observables.update({'subgoal_pos': goal_position})
 
         if 'walker' in self.observation_types:
             for observable in self._walker.observables.proprioception:

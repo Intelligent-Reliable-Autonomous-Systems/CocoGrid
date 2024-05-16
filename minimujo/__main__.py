@@ -128,6 +128,7 @@ elif args.gym:
             manual_action = get_action()
             action[:3] = manual_action
 
+            # square
             # def threshold_action(x):
             #     return np.sign(x) * (abs(x) > 0.1)
             # action[1] = threshold_action(obs[1] - obs[3])
