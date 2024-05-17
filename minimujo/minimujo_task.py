@@ -67,33 +67,36 @@ class MinimujoTask(composer.Task):
         self.observation_types = observation_type.split(',')
 
         self._task_observables = collections.OrderedDict({})
+        scale = self._minimujo_arena.maze_width / 2
         if 'top_camera' in self.observation_types:
             self._minimujo_arena.observables.get_observable('top_camera').enabled = True
             self._task_observables.update({'top_camera': self._minimujo_arena.observables.get_observable('top_camera')})
         if 'pos' in self.observation_types:
-            freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
-            if len(freejoints) > 0:
-                def get_walker_pos(physics):
-                    walker_pos = physics.bind(freejoints[0]).qpos
-                    return walker_pos
-            else:
-                def get_walker_pos(physics):
-                    walker_pos = physics.bind(self._walker.root_body).xpos
-                    return walker_pos[:2]
-            absolute_position = observable_lib.Generic(get_walker_pos)
+            # freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
+            # if len(freejoints) > 0:
+            #     def get_walker_pos(physics):
+            #         walker_pos = physics.bind(freejoints[0]).qpos
+            #         return walker_pos
+            # else:
+            #     def get_walker_pos(physics):
+            #         walker_pos = physics.bind(self._walker.root_body).xpos
+            #         return walker_pos[:2]
+            def get_scaled_walker_pos(physics):
+                return get_walker_pos(physics) / scale
+            absolute_position = observable_lib.Generic(get_scaled_walker_pos)
             absolute_position.enabled = True
 
             self._task_observables.update({'abs_pos': absolute_position})
         if 'vel' in self.observation_types:
-            freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
-            if len(freejoints) > 0:
-                def get_walker_vel(physics):
-                    walker_vel = physics.bind(freejoints[0]).qvel
-                    return walker_vel
-            else:
-                def get_walker_vel(physics):
-                    walker_vel = physics.bind(self._walker.root_joints).qvel
-                    return walker_vel[:2]
+            # freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
+            # if len(freejoints) > 0:
+            #     def get_walker_vel(physics):
+            #         walker_vel = physics.bind(freejoints[0]).qvel
+            #         return walker_vel
+            # else:
+            #     def get_walker_vel(physics):
+            #         walker_vel = physics.bind(self._walker.root_joints).qvel
+            #         return walker_vel[:2]
             absolute_velocity = observable_lib.Generic(get_walker_vel)
             absolute_velocity.enabled = True
 
@@ -101,7 +104,7 @@ class MinimujoTask(composer.Task):
         if 'goal' in self.observation_types:
             def get_goal_pos(physics):
                 col, row = self._minimujo_arena._minigrid_manager.get_final_goal_pos()
-                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2]
+                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2] / scale
                 # return np.array(goal_pos)
             goal_position = observable_lib.Generic(get_goal_pos)
             goal_position.enabled = True
@@ -111,7 +114,7 @@ class MinimujoTask(composer.Task):
         if 'subgoal' in self.observation_types:
             def get_goal_pos(physics):
                 col, row = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
-                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2]
+                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2] / scale
                 # return np.array(goal_pos)
             goal_position = observable_lib.Generic(get_goal_pos)
             goal_position.enabled = True
@@ -162,8 +165,8 @@ class MinimujoTask(composer.Task):
     def root_entity(self):
         return self._minimujo_arena
 
-    def initialize_episode_mjcf(self, unused_random_state):
-        self._minimujo_arena.initialize_arena_mjcf()
+    def initialize_episode_mjcf(self, random_state):
+        self._minimujo_arena.initialize_arena_mjcf(random_state)
 
     def _respawn(self, physics, random_state):
         self._walker.reinitialize_pose(physics, random_state)
@@ -244,8 +247,8 @@ class MinimujoTask(composer.Task):
                 walker_pos = physics.bind(walker.root_body).xpos
                 return walker_pos
             def get_walker_vel(physics):
-                    walker_vel = physics.bind(walker.root_body).cvel
-                    return walker_vel
+                    walker_vel = physics.bind(walker.root_joints).qvel
+                    return walker_vel[:2]
         
         return get_walker_pos, get_walker_vel
 

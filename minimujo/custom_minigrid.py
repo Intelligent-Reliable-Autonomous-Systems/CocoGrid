@@ -87,7 +87,7 @@ class RandomCornerEnv(MiniGridEnv):
         self.agent_dir = 0
 
         # Place a goal square in the bottom-right corner
-        corner = np.random.choice(4)
+        corner = self.np_random.choice(4)
         if corner == 0:
             self.put_obj(Goal(), 1, 1)
         elif corner == 1:

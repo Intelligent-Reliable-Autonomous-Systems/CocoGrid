@@ -173,6 +173,9 @@ class RollingBallObservables(legacy_base.WalkerObservables):
       xmat = physics.bind(self._entity.root_body).xmat
       rotation = np.arctan2(xmat[0],xmat[3])
       return rotation / np.pi 
+      # val = physics.bind(self._entity._mjcf_root.find('joint', 'steer')).qpos
+      # print('val', val)
+      # return val
     return observable.Generic(get_orientation)
   
   @composer.observable

@@ -79,7 +79,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, random=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
+    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     # env = ObsVisualize(env)
@@ -131,10 +131,15 @@ elif args.gym:
             # square
             # def threshold_action(x):
             #     return np.sign(x) * (abs(x) > 0.1)
-            # action[1] = threshold_action(obs[1] - obs[3])
-            # action[2] = -threshold_action(obs[0] - obs[2])
-            # action[1] = 1 if obs[1] > obs[3] else -1
-            # action[2] = 1 if obs[0] < obs[2] else -1
+            # pos_idx = env.unwrapped.range_mapping['abs_pos'][0]
+            # if 'goal_pos' in env.unwrapped.range_mapping:
+            #     goal_idx = env.unwrapped.range_mapping['goal_pos'][0]
+            # else:
+            #     goal_idx = env.unwrapped.range_mapping['subgoal_pos'][0]
+            # action[1] = threshold_action(obs[pos_idx+1] - obs[goal_idx+1])
+            # action[2] = -threshold_action(obs[pos_idx] - obs[goal_idx])
+            # action[1] = 1 if obs[pos_idx+1] > obs[goal_idx+1] else -1
+            # action[2] = 1 if obs[pos_idx] < obs[goal_idx] else -1
             # print(action)
 
             # def threshold_angle(x):
@@ -144,18 +149,14 @@ elif args.gym:
             #         return np.sign(x) * 0.5
             #     else:
             #         return np.sign(x) * 0.8
-            # pos = obs[:2]
-            # goal = np.array([0,-2])
-            # goal = obs[2:4]
+            # pos = obs[pos_idx:pos_idx+2]
+            # goal = obs[goal_idx:goal_idx+2]
             # diff = (goal - pos)
             # target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
             # actual_angle = obs[5]
-            # print(target_angle, actual_angle)
-            # print(pos, goal, target_angle)
-            # print(obs)
-            # if action[0] > 0:
-            #     action[2] = threshold_angle(target_angle - actual_angle)
-            #     action[1] = -0.5
+            if action[0] > 0:
+                action[2] = threshold_angle(target_angle - actual_angle)
+                action[1] = -0.5
 
 
             obs, rew, term, trunc, info = env.step(action)

@@ -29,8 +29,8 @@ class ObsVisualize(gym.Wrapper):
         obs, rew, term, trunc, info = super().step(action)
         self.cum_reward += rew
         self.obs_buffer[self.buffer_idx,:self.obs_length] = obs
-        self.obs_buffer[self.buffer_idx,self.obs_length-1] = rew
-        self.obs_buffer[self.buffer_idx,self.obs_length] = self.cum_reward
+        self.obs_buffer[self.buffer_idx,self.obs_length] = rew
+        self.obs_buffer[self.buffer_idx,self.obs_length+1] = self.cum_reward
         self.buffer_idx += 1
         if term or trunc:
             print(f'OBSERVED {self.buffer_idx} OBSERVATIONS')
@@ -40,8 +40,8 @@ class ObsVisualize(gym.Wrapper):
     def plot_observations(self):
         data = self.obs_buffer[:self.buffer_idx, :]
         column_mappings = self.env.unwrapped.range_mapping.copy()
-        column_mappings['reward'] = (self.obs_length-1, self.obs_length)
-        column_mappings['cum_reward'] = (self.obs_length, self.obs_length+1)
+        column_mappings['reward'] = (self.obs_length, self.obs_length+1)
+        column_mappings['cum_reward'] = (self.obs_length+1, self.obs_length+2)
 
         n_subplots = len(column_mappings)
         rows = int(np.ceil(np.sqrt(n_subplots)))

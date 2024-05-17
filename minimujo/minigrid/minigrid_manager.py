@@ -31,6 +31,7 @@ class MinigridManager:
         self._last_dist = None
         self._subgoal_dist = 0
         self._subgoal_init_dist = float('inf')
+        self._final_subgoal = None
 
     def _get_solver(self, cached=True):
         if cached and self._solver is None:
@@ -54,6 +55,8 @@ class MinigridManager:
             self._subgoal_dist = len(self._current_subgoals)
             if (not dense) and self._subgoal_init_dist > 100000:
                 self._subgoal_init_dist = len(self._current_subgoals)
+            if len(self._current_subgoals) > 0:
+                self._final_subgoal = self._current_subgoals[-1]
         current_subgoals = self._current_subgoals
 
         if not self._use_subgoal_rewards or self._max_subgoals == 0:
@@ -102,12 +105,12 @@ class MinigridManager:
     
     def get_current_goal_pos(self):
         if len(self._current_subgoals) == 0:
-            return (0, 0)
+            return self._final_subgoal.agent_pos if self._final_subgoal is not None else (0,0)
         return self._current_subgoals[0].agent_pos
     
     def get_final_goal_pos(self):
         if len(self._current_subgoals) == 0:
-            return (0, 0)
+            return self._final_subgoal.agent_pos if self._final_subgoal is not None else (0,0)
         return self._current_subgoals[-1].agent_pos
 
     def sync_minigrid(self, arena):

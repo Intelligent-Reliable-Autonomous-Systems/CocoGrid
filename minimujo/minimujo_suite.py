@@ -14,9 +14,9 @@ from minimujo.minimujo_task import MinimujoTask
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 
-def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, random=None, environment_kwargs=None):
+def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, seed=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
-    highEnv.reset(seed=random)
+    highEnv.reset(seed=seed)
 
     environment_kwargs = environment_kwargs or {}
     task_kwargs = {}
@@ -46,6 +46,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, ran
         environment_kwargs['use_subgoal_rewards'] = True
     if task_kwargs.get('reward_type', None) in ['subgoal_dense']:
         environment_kwargs['dense_rewards'] = True
+    environment_kwargs['seed'] = seed
 
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
 
@@ -65,16 +66,17 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, ran
     env = composer.Environment(
         task=task,
         time_limit=time_limit,
-        random_state=random,
+        random_state=seed,
+        fixed_initial_state=True,
         strip_singleton_obs_buffer_dim=True,
     )
     return env
 
-def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, random=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
+def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
     return DMCGym(
         domain=domain, 
         task=task, 
-        task_kwargs=dict(walker_type=walker_type, timesteps=timesteps, random=random), 
+        task_kwargs=dict(walker_type=walker_type, timesteps=timesteps, seed=seed), 
         environment_kwargs=env_kwargs, 
         image_observation_format=image_observation_format,
         rendering=None, 

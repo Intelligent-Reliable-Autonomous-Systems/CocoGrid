@@ -20,7 +20,7 @@ from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
-            random_spawn=False, spawn_padding=0.3, use_subgoal_rewards=False, dense_rewards=False):
+            random_spawn=False, spawn_padding=0.3, use_subgoal_rewards=False, dense_rewards=False, seed=None):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -34,6 +34,7 @@ class MinimujoArena(MazeArena):
         self.cam_height = cam_height
         self.random_spawn = random_spawn
         self.spawn_padding = spawn_padding
+        self._minigrid_seed = seed
 
         labmaze = get_labmaze_from_minigrid(self._minigrid)
         
@@ -130,7 +131,7 @@ class MinimujoArena(MazeArena):
 
     def initialize_arena_mjcf(self, random_state=None):
         if not self._already_initialized:
-            self._minigrid.reset()
+            self._minigrid.reset(seed=self._minigrid_seed)
         self._maze = get_labmaze_from_minigrid(self._minigrid)
         self.regenerate()
         
@@ -206,6 +207,10 @@ class MinimujoArena(MazeArena):
     @property
     def walker_grid_continuous_position(self):
         return self.world_to_minigrid_continuous_position(self.walker_position)
+    
+    @property
+    def maze_width(self):
+        return (self._minigrid.grid.width - 2) * self.xy_scale
     
     def world_to_minigrid_position(self, position):
         row, col = self.world_to_grid_positions([position])[0]
