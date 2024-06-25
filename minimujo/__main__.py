@@ -154,9 +154,9 @@ elif args.gym:
             # diff = (goal - pos)
             # target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
             # actual_angle = obs[5]
-            if action[0] > 0:
-                action[2] = threshold_angle(target_angle - actual_angle)
-                action[1] = -0.5
+            # if action[0] > 0:
+            #     action[2] = threshold_angle(target_angle - actual_angle)
+            #     action[1] = -0.5
 
 
             obs, rew, term, trunc, info = env.step(action)

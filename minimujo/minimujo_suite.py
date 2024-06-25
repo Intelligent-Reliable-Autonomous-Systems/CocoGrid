@@ -67,7 +67,6 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
         task=task,
         time_limit=time_limit,
         random_state=seed,
-        fixed_initial_state=True,
         strip_singleton_obs_buffer_dim=True,
     )
     return env

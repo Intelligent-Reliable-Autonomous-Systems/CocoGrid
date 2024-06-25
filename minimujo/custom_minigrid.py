@@ -2,7 +2,7 @@
 from gymnasium.envs.registration import register
 from minigrid.minigrid_env import MiniGridEnv, MissionSpace
 from minigrid.core.grid import Grid
-from minigrid.core.world_object import Goal
+from minigrid.core.world_object import Goal, Box
 import numpy as np
 
 class UMazeEnv(MiniGridEnv):
@@ -97,6 +97,70 @@ class RandomCornerEnv(MiniGridEnv):
         else:
             self.put_obj(Goal(), width - 2, height - 2)
 
+class WarehouseEnv(MiniGridEnv):
+    def __init__(
+        self,
+        max_steps: int = None,
+        **kwargs,
+    ):
+        size = 17
+
+        mission_space = MissionSpace(mission_func=self._gen_mission)
+
+        if max_steps is None:
+            max_steps = 4 * size**2
+
+        super().__init__(
+            mission_space=mission_space,
+            grid_size=size,
+            see_through_walls=True,  # Set this to True for maximum speed
+            max_steps=max_steps,
+            **kwargs,
+        )
+
+    @staticmethod
+    def _gen_mission():
+        return "navigate a warehouse with boxes"
+    
+    def _gen_grid(self, width, height):
+
+        # Create an walled empty grid
+        self.grid = Grid(width, height)
+        self.grid.wall_rect(0, 0, width, height)
+
+        # Place the agent in the middle
+        self.agent_pos = np.array((12, 12))
+        self.agent_dir = 0
+
+        self.grid.vert_wall(3, 2, 9)
+        self.grid.horz_wall(2, 2, 3)
+        self.grid.horz_wall(2, 6, 3)
+        self.grid.horz_wall(2, 10, 3)
+
+        self.grid.vert_wall(8, 2, 9)
+        self.grid.horz_wall(7, 2, 3)
+        self.grid.horz_wall(7, 6, 3)
+        self.grid.horz_wall(7, 10, 3)
+
+        self.grid.vert_wall(13, 2, 9)
+        self.grid.horz_wall(12, 2, 3)
+        self.grid.horz_wall(12, 6, 3)
+        self.grid.horz_wall(12, 10, 3)
+
+        self.grid.horz_wall(3, 13, 9)
+        self.grid.vert_wall(3, 13, 2)
+        self.grid.vert_wall(11, 13, 2)
+
+        self.put_obj(Box(color='red'), 4, 4)
+        self.put_obj(Box(color='blue'), 7, 9)
+        self.put_obj(Box(color='yellow'), 6, 14)
+        self.put_obj(Box(color='purple'), 14, 7)
+
+        self.put_obj(Goal(), 14, 14)
+        self.put_obj(Goal(), 14, 15)
+        self.put_obj(Goal(), 15, 14)
+        self.put_obj(Goal(), 15, 15)
+
 CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv]
 
 def register_custom_minigrid():
@@ -107,4 +171,8 @@ def register_custom_minigrid():
     register(
         id='MiniGrid-RandomCorner-v0',
         entry_point='minimujo.custom_minigrid:RandomCornerEnv'
+    )
+    register(
+        id='MiniGrid-Warehouse-v0',
+        entry_point='minimujo.custom_minigrid:WarehouseEnv'
     )
