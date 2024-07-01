@@ -210,6 +210,10 @@ class DMCGym(Env):
     def reward_range(self):
         """DMC always has a per-step reward range of (0, 1)"""
         return 0, 1
+    
+    @property
+    def state(self):
+        return self.arena.current_state
 
     def step(self, action):
         if action.dtype.kind == "f":

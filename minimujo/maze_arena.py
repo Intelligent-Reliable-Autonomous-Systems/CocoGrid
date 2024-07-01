@@ -68,8 +68,12 @@ class MazeArena(composer.Arena):
     self._xy_scale = xy_scale
     self._z_height = z_height
 
-    self._x_offset = (self._maze.width - 1) / 2
-    self._y_offset = (self._maze.height - 1) / 2
+    # self._x_offset = (self._maze.width - 1) / 2
+    # self._y_offset = 
+    self._x_offset = -xy_scale / 2
+    self._y_offset = -xy_scale / 2
+    self._camera_x_offset = (self._maze.width - 1) / 2 - self._x_offset
+    self._camera_y_offset = -(self._maze.height - 1) / 2 + self._y_offset
 
     self._mjcf_root.default.geom.rgba = [1, 1, 1, 1]
 
@@ -147,7 +151,7 @@ class MazeArena(composer.Arena):
         _TOP_CAMERA_DISTANCE)
     self._top_camera = self._mjcf_root.worldbody.add(
         'camera', name='top_camera',
-        pos=[0, 0, _TOP_CAMERA_DISTANCE], zaxis=[0, 0, 1], fovy=top_camera_fovy)
+        pos=[self._camera_x_offset, self._camera_y_offset, _TOP_CAMERA_DISTANCE], zaxis=[0, 0, 1], fovy=top_camera_fovy)
 
     self._target_positions = ()
     self._spawn_positions = ()

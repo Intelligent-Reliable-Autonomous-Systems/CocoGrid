@@ -4,7 +4,16 @@ from dm_control import composer
 from dm_control import mjcf
 import numpy as np
 
-from minimujo.color import get_color_rgba
+from minimujo.color import get_color_idx, get_color_rgba
+
+DOOR_IDX = 2
+DOOR_QUATS = [
+    [1, 0, 0, 0], # up
+    [np.sin(np.pi/4), 0, 0, np.sin(np.pi/4)], # left
+    [0, 0, 0, 1], # down
+    [np.sin(np.pi/4), 0, 0, -np.sin(np.pi/4)] # right
+]
+DOOR_ANGLE = [0, 0.5, 1, -0.5]
 
 class DoorEntity(composer.Entity):
     OPEN_ANGLE = np.pi / 4
@@ -13,9 +22,11 @@ class DoorEntity(composer.Entity):
     def _build(self, color=None, is_locked=False, xy_scale=1, z_height=2):
         self.color = color
         rgba = get_color_rgba(color)
+        self._color_idx = get_color_idx(color)
         self._is_locked = is_locked
         self._is_open = False
         self.default_is_locked = is_locked
+        self._object_idx = DOOR_IDX
 
         asset_path = os.path.join(os.path.dirname(__file__), 'assets/door.xml')
         self._mjcf_model = mjcf.from_path(asset_path)
@@ -54,20 +65,16 @@ class DoorEntity(composer.Entity):
             lock_body.remove()
 
         self._keys = []
-        
-        # self.model = mjcf.RootElement()
-        # self.thigh = self.model.worldbody.add('body')
-        # self.hip = self.thigh.add('joint', axis=[0, 0, 1])
-        # self.thigh.add('geom', name='test', type='cylinder', fromto=[0, 0, 0, 0, 0, length], size=[length/4])
-        # self._hinge_geom = self._mjcf_model.worldbody.add(
-        #     'geom', name='hinge', type='cylinder', size=[0.05, 3], rgba=[1, 0, 0, 1])
-        # self._door_body = self._mjcf_model.add('body', pos=[0,0,3])
-        # self._door_geom = self._door_body.add('geom', name='door', type='box', 
-        #                                        size=[0.2,0.2,0.2], rgba=[1, 0, 1, 1])
-        # self._site = self._mjcf_model.worldbody.add(
-        #     'site', type='cylinder', size=self._hinge_geom.size*1.01, rgba=[0, 1, 0, 0.2])
-        # self._sensor = self._mjcf_model.sensor.add('touch', site=self._site)
         self._num_activated_steps = 0
+
+    def set_position(self, physics, position, direction):
+        self.position = position
+
+        # direction indexes [up, left, down, right]
+        self.orientation = DOOR_ANGLE[direction]
+        quat = DOOR_QUATS[direction]
+
+        self.set_pose(physics=physics, position=position, quaternion=quat)
 
     def register_key(self, key):
         if key.color == self.color:
@@ -111,3 +118,17 @@ class DoorEntity(composer.Entity):
     @property
     def is_locked(self):
         return self._is_locked
+    
+    def get_object_state(self, physics):
+        state: np.ndarray = np.zeros(16)
+        state[0] = self._object_idx
+        state[1:4] = self.position
+        state[4] = physics.bind(self._door_hinge).qpos[0] # the hingle angle
+        state[5] = self.orientation # the door orientation
+        # slots 6-10 are empty, since the door is static
+        # 2 spots empty for orientation, 3 for linear velocity
+        state[11] = physics.bind(self._door_hinge).qvel[0]
+        # slots 12-13 are empty
+        state[14] = self._color_idx
+        state[15] = self.is_locked
+        return state

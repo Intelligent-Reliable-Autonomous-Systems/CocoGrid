@@ -1,3 +1,4 @@
+import itertools
 import math
 
 from dm_control import composer
@@ -16,6 +17,8 @@ from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
 from minimujo.maze_arena import MazeArena
 from minimujo.minigrid.minigrid_manager import MinigridManager
+from minimujo.state.minimujo_state import MinimujoStateObserver
+from minimujo.state.tasks import grid_goal_task
 from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
@@ -46,15 +49,14 @@ class MinimujoArena(MazeArena):
         )
         self._already_initialized = True # don't regenerate maze the first time
         
+        # gives the walker a magnet to move objects
         self._grabber = Grabber()
         self.attach(self._grabber)
 
         self.create_entity_mjcf()
 
-        self.setDoorDirections(self._maze.entity_layer)
-
         self._walker_position = np.array([0,0,0])
-        self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
+        # self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
         self._terminated = False
         self._extrinsic_reward = 0
         self._dense_rewards = dense_rewards
@@ -108,6 +110,7 @@ class MinimujoArena(MazeArena):
                     self.attach(entity)
                 else:
                     entity = None
+                    continue
                 self._mini_entity_map[key].append({
                     'entity': entity, 
                     'world_pos': world_pos, 
@@ -115,17 +118,25 @@ class MinimujoArena(MazeArena):
                     'mini_obj': miniObj
                 })
 
+        self.setDoorDirections(self._maze.entity_layer)
+
     def setDoorDirections(self, charMatrix):
+        # find an empty space surrounding the door
+        # assume the that opposite side of that empty space is also empty
         for door in self._mini_entity_map[Door]:
             dir = 0
             c, r = door['mini_pos']
             if r - 1 >= 0 and charMatrix[r-1][c] == '*':
+                # up
                 dir = 0
             elif r + 1 < len(charMatrix[0]) and charMatrix[r-1][c] == '*':
+                # down
                 dir = 2
             if c - 1 >= 0 and charMatrix[r][c-1] == '*':
+                # left
                 dir = 1
             elif c + 1 < len(charMatrix) and charMatrix[r][c+1] == '*':
+                # right
                 dir = 3
             door['dir'] = dir
 
@@ -137,23 +148,21 @@ class MinimujoArena(MazeArena):
         
         if not self._already_initialized:
             self.create_entity_mjcf()
-            self.setDoorDirections(self._maze.entity_layer)
             self.register_walker(self._walker, self._get_walker_pos)
         self._already_initialized = False
+
+        filtered_entities = [entities for key, entities in self._mini_entity_map.items() 
+            if key in [Key, Ball, Box, Door]]
+        objects = [entity['entity'] for entity in itertools.chain(*filtered_entities)]
+        self.state_observer = MinimujoStateObserver(self._minigrid, self.xy_scale, objects, self._walker)
+        self.current_state = None
     
     def initialize_arena(self, physics, random_state):
         if self.random_spawn:
             self._spawn_positions = (self.get_random_spawn_position(),)
 
-        door_quats = [
-            [1, 0, 0, 0],
-            [math.sin(math.pi/4), 0, 0, math.sin(math.pi/4)],
-            [0, 0, 0, 1],
-            [math.sin(math.pi/4), 0, 0, -math.sin(math.pi/4)]
-        ]
-
         for door in self._mini_entity_map[Door]:
-            door['entity'].set_pose(physics, position=door['world_pos'], quaternion=door_quats[door['dir']])
+            door['entity'].set_position(physics, door['world_pos'], door['dir'])
             door['entity'].reset()
             for obj in self._mini_entity_map[Key]:
                 door['entity'].register_key(obj['entity'])
@@ -169,8 +178,8 @@ class MinimujoArena(MazeArena):
         
         self._walker_position = self._spawn_positions[0]
 
-        self._minigrid_manager.reset()
-        self._minigrid_manager.sync_minigrid(self)
+        # self._minigrid_manager.reset()
+        # self._minigrid_manager.sync_minigrid(self)
         self._terminated = False
         self._extrinsic_reward = 0
 
@@ -187,17 +196,28 @@ class MinimujoArena(MazeArena):
             goal['entity'].register_walker(walker)
 
     def before_step(self, physics, random_state):
-        if self._walker:
-            self._walker_position = self._get_walker_pos(physics)[:3]
-        if not self._terminated:
-            reward, terminated = self._minigrid_manager.sync_minigrid(self)
-            self._terminated = terminated
-            self._extrinsic_reward = reward
-            self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self, dense=self._dense_rewards)
+        if self.current_state is None:
+            self.current_state = self.state_observer.get_state(physics)
+        # if self._walker:
+        #     self._walker_position = self._get_walker_pos(physics)[:3]
+        # if not self._terminated:
+        #     reward, terminated = self._minigrid_manager.sync_minigrid(self)
+        #     self._terminated = terminated
+        #     self._extrinsic_reward = reward
+        #     self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self, dense=self._dense_rewards)
+    
+    def after_step(self, physics, random_state):
+        self.previous_state = self.current_state
+        self.current_state = self.state_observer.get_state(physics)
+        # TODO compute reward/termination from goal function
+        self._reward, self._termination = grid_goal_task(
+            self.previous_state,
+            self.current_state
+        )
 
     @property
     def walker_position(self):
-        return self._walker_position
+        return self.current_state.get_walker_position()
     
     @property
     def walker_grid_position(self):
@@ -258,8 +278,8 @@ class MinimujoArena(MazeArena):
             if is_valid:
                 row, col = self.world_to_minigrid_position((x, y, 0))
                 self._minigrid.agent_pos = (col, row)
-                if not self._minigrid_manager.has_solution():
-                    is_valid = False
+                # if not self._minigrid_manager.has_solution():
+                #     is_valid = False
             if is_valid:
                 return np.array([x, y, 0])
         

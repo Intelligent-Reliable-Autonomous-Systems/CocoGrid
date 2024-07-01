@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
@@ -19,13 +19,13 @@ class ObsVisualize(gym.Wrapper):
         self.buffer_idx += 1
         return observation
     
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
         # print(f'OBSERVED {self.buffer_idx} OBSERVATIONS')
         self.buffer_idx = 0
         self.cum_reward = 0
         return super().reset(seed=seed, options=options)
 
-    def step(self, action: Any) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+    def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         obs, rew, term, trunc, info = super().step(action)
         self.cum_reward += rew
         self.obs_buffer[self.buffer_idx,:self.obs_length] = obs

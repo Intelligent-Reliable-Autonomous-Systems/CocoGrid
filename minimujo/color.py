@@ -1,10 +1,10 @@
 import logging
 
 COLOR_MAP = {
-    'red': [1, 0, 0, 1],
-    'green': [0, 1, 0, 1],
-    'blue': [0, 0, 1, 1],
-    'yellow': [1, 1, 0, 1],
+    'red': [0.8, 0, 0, 1],
+    'green': [0, 0.8, 0, 1],
+    'blue': [0, 0, 0.8, 1],
+    'yellow': [0.8, 0.8, 0, 1],
     'purple': [0.5, 0, 0.5, 1],
     'grey': [0.6, 0.6, 0.6, 1],
     'orange': [1, 0.5, 0, 1],
@@ -24,3 +24,6 @@ def get_light_variation(rgba):
     for i in range(3):
         new_rgba[i] = min(1, rgba[i] * 1.2)
     return new_rgba
+
+def get_color_idx(color):
+    return list(COLOR_MAP.keys()).index(color)

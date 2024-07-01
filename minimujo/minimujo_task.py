@@ -264,7 +264,7 @@ class MinimujoTask(composer.Task):
     def should_terminate_episode(self, physics):
         # if self._walker.aliveness(physics) < self._aliveness_threshold:
         #     self._failure_termination = True
-        if self._minimujo_arena._terminated:
+        if self._minimujo_arena._termination:
             self._discount = 0.0
             return True
         else:
@@ -272,10 +272,10 @@ class MinimujoTask(composer.Task):
 
     def get_reward(self, physics):
         del physics
-        reward = self._reward_func(self._minimujo_arena._extrinsic_reward, self._minimujo_arena._intrinsic_reward)
-        self._cum_reward += reward
+        # reward = self._reward_func(self._minimujo_arena._extrinsic_reward, self._minimujo_arena._intrinsic_reward)
+        self._cum_reward += self._minimujo_arena._reward
 
-        return reward
+        return self._minimujo_arena._reward
 
     def get_discount(self, physics):
         del physics

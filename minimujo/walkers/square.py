@@ -131,3 +131,11 @@ class SquareObservables(composer.Observables):
     @property
     def proprioception(self):
         return [self.collision_detection]
+    
+    @property
+    def kinematic_sensors(self):
+        return []
+    
+    @property
+    def dynamic_sensors(self):
+        return []
