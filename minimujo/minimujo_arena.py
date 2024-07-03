@@ -23,7 +23,7 @@ from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
-            random_spawn=False, spawn_padding=0.3, use_subgoal_rewards=False, dense_rewards=False, seed=None):
+            random_spawn=False, spawn_padding=0.3, spawn_position=None, spawn_sampler=None, task_function=grid_goal_task, use_subgoal_rewards=False, dense_rewards=False, seed=None):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -37,6 +37,9 @@ class MinimujoArena(MazeArena):
         self.cam_height = cam_height
         self.random_spawn = random_spawn
         self.spawn_padding = spawn_padding
+        self.spawn_position = spawn_position
+        self.spawn_sampler = spawn_sampler
+        self.task_function = task_function
         self._minigrid_seed = seed
 
         labmaze = get_labmaze_from_minigrid(self._minigrid)
@@ -158,7 +161,15 @@ class MinimujoArena(MazeArena):
         self.current_state = None
     
     def initialize_arena(self, physics, random_state):
-        if self.random_spawn:
+        if self.spawn_position is not None:
+            pos = np.array(self.spawn_position)
+            pos.resize((3,))
+            self._spawn_positions = [pos]
+        elif self.spawn_sampler is not None:
+            pos = np.array(self.spawn_sampler())
+            pos.resize((3,))
+            self._spawn_positions = [pos]
+        elif self.random_spawn:
             self._spawn_positions = (self.get_random_spawn_position(),)
 
         for door in self._mini_entity_map[Door]:
@@ -209,8 +220,7 @@ class MinimujoArena(MazeArena):
     def after_step(self, physics, random_state):
         self.previous_state = self.current_state
         self.current_state = self.state_observer.get_state(physics)
-        # TODO compute reward/termination from goal function
-        self._reward, self._termination = grid_goal_task(
+        self._reward, self._termination = self.task_function(
             self.previous_state,
             self.current_state
         )

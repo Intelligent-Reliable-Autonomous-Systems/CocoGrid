@@ -97,6 +97,53 @@ class RandomCornerEnv(MiniGridEnv):
         else:
             self.put_obj(Goal(), width - 2, height - 2)
 
+class HallwayChoiceEnv(MiniGridEnv):
+    def __init__(
+        self,
+        size=7,
+        max_steps: int = None,
+        **kwargs,
+    ):
+
+        mission_space = MissionSpace(mission_func=self._gen_mission)
+
+        if max_steps is None:
+            max_steps = 4 * size**2
+
+        super().__init__(
+            mission_space=mission_space,
+            grid_size=size,
+            see_through_walls=True,  # Set this to True for maximum speed
+            max_steps=max_steps,
+            **kwargs,
+        )
+
+    @staticmethod
+    def _gen_mission():
+        return "navigate a hallway and choose which path to go down"
+    
+    def _gen_grid(self, width, height):
+        assert width % 2 == 1 and height % 2 == 1  # odd size
+
+        # Create an walled empty grid
+        self.grid = Grid(width, height)
+        self.grid.wall_rect(0, 0, width, height)
+
+        # Create hallways
+        self.grid.wall_rect(0, 0, width - 2, height // 2)
+        self.grid.wall_rect(0, height // 2 + 1, width - 2, height // 2)
+
+        # Place the agent in the middle
+        self.agent_pos = np.array((1, (height) // 2))
+        self.agent_dir = 0
+
+        # Place a goal square in the bottom-right corner
+        corner = self.np_random.choice(2)
+        if corner == 0:
+            self.put_obj(Goal(), width - 2, 1)
+        else:
+            self.put_obj(Goal(), width - 2, height - 2)
+
 class WarehouseEnv(MiniGridEnv):
     def __init__(
         self,
@@ -161,7 +208,7 @@ class WarehouseEnv(MiniGridEnv):
         self.put_obj(Goal(), 15, 14)
         self.put_obj(Goal(), 15, 15)
 
-CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv]
+CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv, HallwayChoiceEnv]
 
 def register_custom_minigrid():
     register(
@@ -171,6 +218,10 @@ def register_custom_minigrid():
     register(
         id='MiniGrid-RandomCorner-v0',
         entry_point='minimujo.custom_minigrid:RandomCornerEnv'
+    )
+    register(
+        id='MiniGrid-HallwayChoice-v0',
+        entry_point='minimujo.custom_minigrid:HallwayChoiceEnv'
     )
     register(
         id='MiniGrid-Warehouse-v0',

@@ -67,7 +67,7 @@ class MinimujoTask(composer.Task):
         self.observation_types = observation_type.split(',')
 
         self._task_observables = collections.OrderedDict({})
-        scale = self._minimujo_arena.maze_width / 2
+        scale = self._minimujo_arena.maze_width
         if 'top_camera' in self.observation_types:
             self._minimujo_arena.observables.get_observable('top_camera').enabled = True
             self._task_observables.update({'top_camera': self._minimujo_arena.observables.get_observable('top_camera')})
@@ -83,7 +83,7 @@ class MinimujoTask(composer.Task):
             #         return walker_pos[:2]
             def get_scaled_walker_pos(physics):
                 return get_walker_pos(physics) / scale
-            absolute_position = observable_lib.Generic(get_scaled_walker_pos)
+            absolute_position = observable_lib.Generic(get_walker_pos)
             absolute_position.enabled = True
 
             self._task_observables.update({'abs_pos': absolute_position})

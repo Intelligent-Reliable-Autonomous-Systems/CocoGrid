@@ -1,6 +1,7 @@
 from __future__ import annotations
 import hashlib
 import pickle
+import sys
 from typing import List, Tuple
 import numpy as np
 from minimujo.state.minimujo_state import MinimujoState
@@ -93,15 +94,19 @@ class GridAbstraction:
         row = int(np.floor(-pos[1] / xy_scale))
         return col, row
 
+md5_kwargs = {}
+if sys.version_info.major == 3 and sys.version_info.minor >= 9:
+    md5_kwargs = {'usedforsecurity': False}
+
 # hashing utils
 def hash_ndarray(arr):
     """Compute an MD5 hash for a NumPy array."""
     arr_bytes = arr.tobytes()
-    hash_obj = hashlib.md5(arr_bytes, usedforsecurity=False)
+    hash_obj = hashlib.md5(arr_bytes, **md5_kwargs)
     return hash_obj.hexdigest()
     
 def hash_list_of_tuples(list_of_tuples):
     """Compute a hash for a list of tuples."""
     list_bytes = pickle.dumps(list_of_tuples)
-    hash_obj = hashlib.md5(list_bytes, usedforsecurity=False)
+    hash_obj = hashlib.md5(list_bytes, **md5_kwargs)
     return hash_obj.hexdigest()

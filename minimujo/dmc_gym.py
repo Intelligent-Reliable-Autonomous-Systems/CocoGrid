@@ -234,7 +234,7 @@ class DMCGym(Env):
         if self.track_position:
             self.trajectory.append(np.array(self.arena.walker_position))
 
-        if self.image_observation_format == '0-1':
+        if self.is_image_obs and self.image_observation_format == '0-1':
             observation = (observation / 255.).astype(np.float32)
 
         return observation, reward, termination, truncation, info
