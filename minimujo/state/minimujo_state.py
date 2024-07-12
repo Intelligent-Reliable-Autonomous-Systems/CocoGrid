@@ -17,6 +17,12 @@ class MinimujoState:
 
     def get_walker_position(self):
         return self.pose[:3]
+    
+    def get_normalized_walker_position(self):
+        pos = self.pose[:3].copy()
+        pos[:2] /= self.xy_scale * self.grid.shape[0]
+        pos[1] *= -1
+        return pos
 
 class MinimujoStateObserver:
 

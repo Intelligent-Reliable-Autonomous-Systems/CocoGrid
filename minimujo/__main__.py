@@ -1,7 +1,7 @@
 import argparse
 
 from minimujo import minimujo_suite
-from minimujo.utils.obs_visualize import ObsVisualize
+from minimujo.utils.visualize.obs_visualize import ObsVisualize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
@@ -73,6 +73,7 @@ if args.interactive:
 elif args.gym:
     import gymnasium as gym
     from gymnasium.wrappers.human_rendering import HumanRendering
+    from minimujo.utils.logging import LoggingWrapper
     import numpy as np
     from pygame import key
     import pygame
@@ -83,6 +84,12 @@ elif args.gym:
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     # env = ObsVisualize(env)
+    env = LoggingWrapper(env, buffer_size=args.timesteps)
+    def test1_transform(env, **kwargs):
+        pos = env.unwrapped.state.get_normalized_walker_position()
+        pos[2] = 5
+        return pos
+    env.subscribe_heatmap('test1', transform=test1_transform)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
@@ -230,11 +237,11 @@ elif args.framerate:
     import gymnasium as gym
     import timeit
 
-    N_STEPS = 1000
-    N_TESTS = 10
+    N_STEPS = 200
+    N_TESTS = 5
     ensure_env()
     
-    env = gym.make(args.env, env_params={'observation_type': args.obs_type})
+    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=N_STEPS)
 
     def run_env():
         print(f'Testing gym env {args.env} with observation_type {args.obs_type} for {N_STEPS} steps')
