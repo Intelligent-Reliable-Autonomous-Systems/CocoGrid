@@ -240,7 +240,11 @@ class MinimujoArena(MazeArena):
     
     @property
     def maze_width(self):
-        return (self._minigrid.grid.width - 2) * self.xy_scale
+        return self._minigrid.grid.width * self.xy_scale
+    
+    @property
+    def maze_height(self):
+        return self._minigrid.grid.height * self.xy_scale
     
     def world_to_minigrid_position(self, position):
         row, col = self.world_to_grid_positions([position])[0]

@@ -2,7 +2,7 @@ import numpy as np
 
 class WeightedKDEHeatmap:
 
-    def __init__(self, heatmap_size=(200,200), kernel_size=9, channels=1, decay=1):
+    def __init__(self, xy_range=(0,0,1,1), heatmap_resolution=(200,200), kernel_size=9, decay=1):
         assert kernel_size % 2 == 1, f"kernel_size {kernel_size} should be odd"
 
         self.kernel_size = kernel_size
@@ -10,17 +10,21 @@ class WeightedKDEHeatmap:
         self.kernel = WeightedKDEHeatmap.create_gaussian_kernel(self.kernel_size, self.sigma)
         self.decay = decay
 
-        self.heatmap_shape = heatmap_size
-        self.weightmap = np.zeros(heatmap_size)
-        self.densitymap = np.zeros(heatmap_size)
+        self.heatmap_shape = heatmap_resolution[::-1]
+        self.weightmap = np.zeros(heatmap_resolution)
+        self.densitymap = np.zeros(heatmap_resolution)
         self.norm_factor = 0
 
         self.half_size = self.kernel_size // 2
         self.half_vector = np.array([self.half_size, self.half_size])
         self.lower_bounds = np.zeros(2, dtype=int)
-        self.upper_bounds = np.array(self.heatmap_shape, dtype=int)
+        self.upper_bounds = np.array([self.heatmap_shape[0], self.heatmap_shape[1]], dtype=int)
         self.kernel_shape = np.array([kernel_size, kernel_size], dtype=int)
         self.kernel_area = self.kernel.sum()
+
+        # for scaling points
+        self.range_corner = np.array(xy_range[:2])
+        self.range_scale = self.upper_bounds / np.array(xy_range[2:])
 
     @staticmethod
     def create_gaussian_kernel(kernel_size: int, sigma: float) -> np.ndarray:
@@ -31,8 +35,8 @@ class WeightedKDEHeatmap:
     
     def add_batch(self, points: np.ndarray, weights: np.ndarray) -> None:
         assert points.shape[0] > 0 and points.shape[0] == weights.shape[0]
-        points = (points * np.array(self.heatmap_shape)).astype(int)
-        print(points.mean(), np.array(self.heatmap_shape))
+        print(points, np.array(self.heatmap_shape))
+        points = ((points - self.range_corner) * self.range_scale).astype(int)
 
         old_norm_factor = self.norm_factor
         self.norm_factor = self.decay * old_norm_factor
@@ -58,13 +62,13 @@ class WeightedKDEHeatmap:
                     # fully out of bounds
                     continue
                 # don't unnecessarily compute area
-                kernel_area = self.kernel[kernel_x_start:kernel_x_end, kernel_y_start:kernel_y_end].sum()
+                kernel_area = self.kernel[kernel_y_start:kernel_y_end, kernel_x_start:kernel_x_end].sum()
                 
             self.norm_factor += kernel_area
             
             density_weight = 1 / (self.decay * old_norm_factor)
-            self.densitymap[x_start:x_end, y_start:y_end] += density_weight * self.kernel[kernel_x_start:kernel_x_end, kernel_y_start:kernel_y_end]
-            self.weightmap[x_start:x_end, y_start:y_end] += weight * density_weight * self.kernel[kernel_x_start:kernel_x_end, kernel_y_start:kernel_y_end]
+            self.densitymap[y_start:y_end, x_start:x_end] += density_weight * self.kernel[kernel_y_start:kernel_y_end, kernel_x_start:kernel_x_end]
+            self.weightmap[y_start:y_end, x_start:x_end] += weight * density_weight * self.kernel[kernel_y_start:kernel_y_end, kernel_x_start:kernel_x_end]
 
         # normalize the density
         norm_ratio = old_norm_factor / self.norm_factor
@@ -82,6 +86,7 @@ class WeightedKDEHeatmap:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
+    # extents = 
     kde_heatmap = WeightedKDEHeatmap(decay=0.9)
 
     # center = np.array([10.,10.])
@@ -91,19 +96,23 @@ if __name__ == "__main__":
     #     weight = np.random.uniform(0,1)
     #     kde_heatmap.add_single(point, 1)
 
-    batch_size = 10
-    center = np.array([0.02,0.02])
-    mean = 0
-    for i in range(80):
-        mean += 0.02
-        if i < 40:
-            center += np.array([0.01, 0.015])
-        else:
-            center -= np.array([0.01, 0.015])
-        points = np.random.uniform(-0.1, 0.1, (batch_size,2)) + center
-        weights = np.random.uniform(0,1, batch_size) + mean
-        # weights = np.ones(batch_size)
-        kde_heatmap.add_batch(points, weights)
+    # batch_size = 10
+    # center = np.array([0.02,0.02])
+    # mean = 0
+    # for i in range(80):
+    #     mean += 0.02
+    #     if i < 40:
+    #         center += np.array([0.01, 0.015])
+    #     else:
+    #         center -= np.array([0.01, 0.015])
+    #     points = np.random.uniform(-0.1, 0.1, (batch_size,2)) + center
+    #     weights = np.random.uniform(0,1, batch_size) + mean
+    #     # weights = np.ones(batch_size)
+    #     kde_heatmap.add_batch(points, weights)
+
+    points = np.random.uniform(low=[1, -4], high=[4,-1], size=(10,2))
+    weights = np.ones(10)
+    kde_heatmap.add_batch(points, weights)
 
     # Plot the heatmap
     plt.imshow(kde_heatmap.heatmap, origin='lower', cmap='viridis')
