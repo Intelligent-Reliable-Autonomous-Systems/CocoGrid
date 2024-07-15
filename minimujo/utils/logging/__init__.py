@@ -3,9 +3,25 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 import gymnasium as gym
 from tensorboardX import SummaryWriter
 
+def capped_cubic_logging_schedule(episode_id: int) -> bool:
+    """This function will trigger logging at the episode indices 0, 1, 8, 27, ..., :math:`k^3`, ..., 729, 1000, 2000, 3000, ...
+
+    Useful for logging metrics that are heavy duty, like images and figures.
+
+    Args:
+        episode_id: The episode number
+
+    Returns:
+        If to apply a video schedule number
+    """
+    if episode_id < 1000:
+        return int(round(episode_id ** (1.0 / 3))) ** 3 == episode_id
+    else:
+        return episode_id % 1000 == 0
+
 class LoggingMetric:
 
-    def register(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int, global_step_callback: Callable = None):
+    def register(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int, global_step_callback: Optional[Callable] = None):
         self.env = env
         self.summary_writer = summary_writer
         self.max_timesteps = max_timesteps

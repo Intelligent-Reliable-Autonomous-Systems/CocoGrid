@@ -9,16 +9,17 @@ import numpy as np
 from tensorboardX import SummaryWriter
 
 from minimujo.minimujo_arena import MinimujoArena
-from minimujo.utils.logging import LoggingMetric
+from minimujo.utils.logging import LoggingMetric, capped_cubic_logging_schedule
 from minimujo.utils.visualize.weighted_kde import WeightedKDEHeatmap
 
 class HeatmapLogger(LoggingMetric):
 
-    def __init__(self, label: str, step_transform: Callable, end_transform: Callable = None, should_log_density: bool = False, extent: Tuple[float] = (0, 1, 0, 1), decay: float = 1, 
-            axes_label: Tuple[str] = ('X', 'Y', 'Value'), color_map: str = 'plasma', is_log_scale: bool = False, value_min: Optional[float] = None, value_max: Optional[float] = None,
-            origin_corner: Literal['lower', 'upper'] = 'lower') -> None:
+    def __init__(self, label: str, step_transform: Callable, end_transform: Callable = None, logging_schedule: Callable = capped_cubic_logging_schedule, 
+            should_log_density: bool = False, extent: Tuple[float] = (0, 1, 0, 1), decay: float = 1, axes_label: Tuple[str] = ('X', 'Y', 'Value'), color_map: str = 'plasma', 
+            is_log_scale: bool = False, value_min: Optional[float] = None, value_max: Optional[float] = None, origin_corner: Literal['lower', 'upper'] = 'lower') -> None:
         self.transform = step_transform
         self.end_transform = end_transform or dummy_end_transform
+        self.logging_schedule = logging_schedule
 
         xy_range = (extent[0], extent[2], extent[1]-extent[0], extent[3]-extent[2])
         self.heatmap = WeightedKDEHeatmap(xy_range=xy_range, decay=decay)
@@ -47,15 +48,17 @@ class HeatmapLogger(LoggingMetric):
     def on_episode_end(self, timestep: int, episode: int) -> None:
         self.end_transform(batch=self.buffer[:timestep+1], env=self.env, timestep=timestep)
         self.heatmap.add_batch(self.buffer[:timestep+1,:2], self.buffer[:timestep+1,2])
-        figure, _ = plt.subplots()
-        logmap = self.heatmap.densitymap if self.should_log_density else self.heatmap.heatmap
-        plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
-        plt.colorbar(label=self.axes_label[2])
-        plt.title(f"{self.label} (Episode {episode})")
-        plt.xlabel(self.axes_label[0])
-        plt.ylabel(self.axes_label[1])
-        if self.summary_writer is not None:
-            self.summary_writer.add_figure(self.label, figure, self.global_step_callback(), True)
+
+        if self.logging_schedule(episode):
+            figure, _ = plt.subplots()
+            logmap = self.heatmap.densitymap if self.should_log_density else self.heatmap.heatmap
+            plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
+            plt.colorbar(label=self.axes_label[2])
+            plt.title(f"{self.label} (Episode {episode})")
+            plt.xlabel(self.axes_label[0])
+            plt.ylabel(self.axes_label[1])
+            if self.summary_writer is not None:
+                self.summary_writer.add_figure(self.label, figure, self.global_step_callback(), True)
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         if timestep >= self.max_timesteps:
