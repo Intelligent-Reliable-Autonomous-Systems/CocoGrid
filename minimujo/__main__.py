@@ -73,7 +73,7 @@ if args.interactive:
 elif args.gym:
     import gymnasium as gym
     from gymnasium.wrappers.human_rendering import HumanRendering
-    from minimujo.utils.logging import LoggingWrapper
+    from minimujo.utils.logging import LoggingWrapper, HeatmapLogger, get_minimujo_heatmap_loggers
     import numpy as np
     from pygame import key
     import pygame
@@ -84,12 +84,12 @@ elif args.gym:
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
     # env = ObsVisualize(env)
-    env = LoggingWrapper(env, buffer_size=args.timesteps)
-    def test1_transform(env, **kwargs):
-        pos = env.unwrapped.state.get_normalized_walker_position()
-        pos[2] = 5
-        return pos
-    env.subscribe_heatmap('test1', transform=test1_transform)
+
+    import tensorboardX
+    summary_writer = tensorboardX.SummaryWriter()
+    env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
+    for logger in get_minimujo_heatmap_loggers(env, gamma=0.99):
+        env.subscribe_metric(logger)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')

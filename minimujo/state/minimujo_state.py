@@ -1,5 +1,6 @@
 import collections
 from dataclasses import dataclass
+from typing import Dict
 from dm_control.locomotion.walkers import base
 from minigrid.core.world_object import Goal, Lava, Wall
 from minigrid.minigrid_env import MiniGridEnv
@@ -8,21 +9,33 @@ import numpy as np
 @dataclass
 class MinimujoState:
 
-    def __init__(self, grid, xy_scale, objects, pose, walker):
+    def __init__(self, grid: np.ndarray, xy_scale: float, objects: np.ndarray, pose: np.ndarray, walker: Dict[str, np.ndarray]):
         self.grid = grid
+        self.grid.flags.writeable = False
         self.xy_scale = xy_scale
         self.objects = objects
+        self.objects.flags.writeable = False
         self.pose = pose
+        self.pose.flags.writeable = False
         self.walker = walker
+        for arr in self.walker.values():
+            if arr.ndim > 0:
+                arr.flags.writeable = False
+
+    def get_arena_size(self):
+        return np.array(self.grid.shape) * self.xy_scale
 
     def get_walker_position(self):
         return self.pose[:3]
     
-    def get_normalized_walker_position(self):
+    def get_normalized_walker_position(self, without_border=False):
         pos = self.pose[:3].copy()
-        pos[:2] /= self.xy_scale * self.grid.shape[0]
         pos[1] *= -1
+        pos[:2] = (pos[:2] / self.xy_scale - int(without_border)) / (self.grid.shape[0] - 2 * int(without_border))
         return pos
+    
+    def get_walker_velocity(self):
+        return self.pose[7:10]
 
 class MinimujoStateObserver:
 
@@ -48,7 +61,7 @@ class MinimujoStateObserver:
         walker_pose[:3] = physics.bind(self.walker.root_body).xpos
         walker_pose[3:7] = physics.bind(self.walker.root_body).xquat
         walker_pose[7:13] = physics.bind(self.walker.root_body).cvel
-        walker = { key:observable.observation_callable(physics)() for key, observable in self.walker_observables.items()}
+        walker = { key:observable.observation_callable(physics)().copy() for key, observable in self.walker_observables.items()}
 
         return MinimujoState(self.grid, self.xy_scale, object_states, walker_pose, walker)
 

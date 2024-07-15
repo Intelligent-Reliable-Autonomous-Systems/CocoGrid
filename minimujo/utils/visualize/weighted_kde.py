@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 
 class WeightedKDEHeatmap:
@@ -35,7 +37,6 @@ class WeightedKDEHeatmap:
     
     def add_batch(self, points: np.ndarray, weights: np.ndarray) -> None:
         assert points.shape[0] > 0 and points.shape[0] == weights.shape[0]
-        print(points, np.array(self.heatmap_shape))
         points = ((points - self.range_corner) * self.range_scale).astype(int)
 
         old_norm_factor = self.norm_factor
@@ -70,10 +71,13 @@ class WeightedKDEHeatmap:
             self.densitymap[y_start:y_end, x_start:x_end] += density_weight * self.kernel[kernel_y_start:kernel_y_end, kernel_x_start:kernel_x_end]
             self.weightmap[y_start:y_end, x_start:x_end] += weight * density_weight * self.kernel[kernel_y_start:kernel_y_end, kernel_x_start:kernel_x_end]
 
-        # normalize the density
-        norm_ratio = old_norm_factor / self.norm_factor
-        self.densitymap *= (self.decay * norm_ratio)
-        self.weightmap *= (self.decay * norm_ratio)
+        if self.norm_factor > 0:
+            # normalize the density
+            norm_ratio = old_norm_factor / self.norm_factor
+            self.densitymap *= (self.decay * norm_ratio)
+            self.weightmap *= (self.decay * norm_ratio)
+        else:
+            warnings.warn("WeightedKDEHeatmap added first batch with no points in xy_range")
         
     def add_single(self, point, weight):
         self.add_batch(np.array([point]), np.array([weight]))
