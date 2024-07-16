@@ -47,11 +47,14 @@ class HeatmapLogger(LoggingMetric):
 
     def on_episode_end(self, timestep: int, episode: int) -> None:
         self.end_transform(batch=self.buffer[:timestep+1], env=self.env, timestep=timestep)
-        self.heatmap.add_batch(self.buffer[:timestep+1,:2], self.buffer[:timestep+1,2])
+
+        filtered_buffer = self.buffer[:timestep+1]
+        filtered_buffer = filtered_buffer[np.all(np.isfinite(filtered_buffer), axis=1)]
+        self.heatmap.add_batch(filtered_buffer[:,:2], filtered_buffer[:,2])
 
         if self.logging_schedule(episode):
             figure, _ = plt.subplots()
-            logmap = self.heatmap.densitymap if self.should_log_density else self.heatmap.heatmap
+            logmap = self.heatmap.densitymap_normalized if self.should_log_density else self.heatmap.heatmap
             plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
             plt.colorbar(label=self.axes_label[2])
             plt.title(f"{self.label} (Episode {episode})")
@@ -107,6 +110,11 @@ def walker_xy_direction_transform(env, **kwargs):
 def dummy_end_transform(**kwargs):
     pass
 
+def final_step_end_transform(batch: np.ndarray, **kwargs):
+    """Erases all steps except the final step. Useful for visualizing termination/truncation states"""
+    n = batch.shape[0]
+    batch[:n-1,0] = np.nan
+
 def curry_returns_end_transform(gamma):
     """Curry an end_transform that takes a batch of step rewards and computes the discounted returns"""
     def returns_end_transform(batch: np.ndarray, **kwargs):
@@ -115,13 +123,25 @@ def curry_returns_end_transform(gamma):
             batch[t,2] += gamma * batch[t+1,2]
     return returns_end_transform
 
-def get_minimujo_heatmap_loggers(env: gym.Env, gamma: float = 1) -> List[HeatmapLogger]:
+def get_minimujo_heatmap_loggers(env: gym.Env, decay: float = 1, gamma: float = 1) -> List[HeatmapLogger]:
     loggers = []
     extent = get_minimujo_extent(env)
 
     loggers.append(HeatmapLogger(
         'walker_position_density_heatmap', 
         step_transform=walker_xyz_transform, 
+        decay=decay,
+        should_log_density=True,
+        is_log_scale=True,
+        axes_label=('X', 'Y', 'Density'),
+        extent=extent
+    ))
+
+    loggers.append(HeatmapLogger(
+        'walker_termination_density_heatmap', 
+        step_transform=walker_xyz_transform, 
+        end_transform=final_step_end_transform,
+        decay=decay,
         should_log_density=True,
         is_log_scale=True,
         axes_label=('X', 'Y', 'Density'),
@@ -139,6 +159,7 @@ def get_minimujo_heatmap_loggers(env: gym.Env, gamma: float = 1) -> List[Heatmap
     loggers.append(HeatmapLogger(
         'walker_speed_heatmap', 
         step_transform=walker_xy_speed_transform,
+        decay=decay,
         axes_label=('X', 'Y', 'Speed'),
         extent=extent,
         value_min=0
@@ -147,6 +168,7 @@ def get_minimujo_heatmap_loggers(env: gym.Env, gamma: float = 1) -> List[Heatmap
     loggers.append(HeatmapLogger(
         'walker_direction_heatmap', 
         step_transform=walker_xy_direction_transform,
+        decay=decay,
         axes_label=('X', 'Y', 'Direction'),
         extent=extent,
         color_map='hsv',
@@ -158,6 +180,7 @@ def get_minimujo_heatmap_loggers(env: gym.Env, gamma: float = 1) -> List[Heatmap
         'walker_returns_heatmap', 
         step_transform=walker_xy_reward_transform,
         end_transform=curry_returns_end_transform(gamma),
+        decay=decay,
         axes_label=('X', 'Y', 'Return'),
         extent=extent
     ))
