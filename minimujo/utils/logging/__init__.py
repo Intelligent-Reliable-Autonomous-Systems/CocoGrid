@@ -42,7 +42,7 @@ class LoggingWrapper(gym.Wrapper):
 
     global_step = 0
 
-    def __init__(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int = 1000):
+    def __init__(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int = 1000, standard_label: str = 'standard'):
         super().__init__(env)
 
         self.summary_writer = summary_writer
@@ -53,7 +53,7 @@ class LoggingWrapper(gym.Wrapper):
         self.max_timesteps = max_timesteps
         self.global_step_callback = lambda: LoggingWrapper.global_step
 
-        standard_logger = StandardLogger()
+        standard_logger = StandardLogger(standard_label)
         self.subscribe_metric(standard_logger)
 
     def subscribe_metric(self, metric: LoggingMetric):

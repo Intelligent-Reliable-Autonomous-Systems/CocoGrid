@@ -177,6 +177,14 @@ def get_minimujo_heatmap_loggers(env: gym.Env, decay: float = 1, gamma: float = 
     ))
 
     loggers.append(HeatmapLogger(
+        'walker_reward_heatmap', 
+        step_transform=walker_xy_reward_transform,
+        decay=decay,
+        axes_label=('X', 'Y', 'Reward'),
+        extent=extent
+    ))
+
+    loggers.append(HeatmapLogger(
         'walker_returns_heatmap', 
         step_transform=walker_xy_reward_transform,
         end_transform=curry_returns_end_transform(gamma),
