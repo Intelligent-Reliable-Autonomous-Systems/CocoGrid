@@ -1,6 +1,7 @@
 
 
 from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
+import warnings
 
 import gymnasium as gym
 from matplotlib import pyplot as plt
@@ -53,15 +54,18 @@ class HeatmapLogger(LoggingMetric):
         self.heatmap.add_batch(filtered_buffer[:,:2], filtered_buffer[:,2])
 
         if self.logging_schedule(episode):
-            figure, _ = plt.subplots()
-            logmap = self.heatmap.densitymap_normalized if self.should_log_density else self.heatmap.heatmap
-            plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
-            plt.colorbar(label=self.axes_label[2])
-            plt.title(f"{self.label} (Episode {episode})")
-            plt.xlabel(self.axes_label[0])
-            plt.ylabel(self.axes_label[1])
-            if self.summary_writer is not None:
-                self.summary_writer.add_figure(self.label, figure, self.global_step_callback(), True)
+            try:
+                figure, _ = plt.subplots()
+                logmap = self.heatmap.densitymap_normalized if self.should_log_density else self.heatmap.heatmap
+                plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
+                plt.colorbar(label=self.axes_label[2])
+                plt.title(f"{self.label} (Episode {episode})")
+                plt.xlabel(self.axes_label[0])
+                plt.ylabel(self.axes_label[1])
+                if self.summary_writer is not None:
+                    self.summary_writer.add_figure(self.label, figure, self.global_step_callback(), True)
+            except Exception as e:
+                warnings.warn(f"Exception occurred in heatmap {self.label}: {str(e)}", UserWarning)
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         if timestep >= self.max_timesteps:
