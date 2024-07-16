@@ -46,10 +46,10 @@ class HeatmapLogger(LoggingMetric):
     def on_episode_start(self, obs: Any, info: Dict[str, Any], episode: int) -> None:
         self.current_episode = episode
 
-    def on_episode_end(self, timestep: int, episode: int) -> None:
-        self.end_transform(batch=self.buffer[:timestep+1], env=self.env, timestep=timestep)
+    def on_episode_end(self, timesteps: int, episode: int) -> None:
+        self.end_transform(batch=self.buffer[:timesteps], env=self.env, timestep=timesteps)
 
-        filtered_buffer = self.buffer[:timestep+1]
+        filtered_buffer = self.buffer[:timesteps]
         filtered_buffer = filtered_buffer[np.all(np.isfinite(filtered_buffer), axis=1)]
         self.heatmap.add_batch(filtered_buffer[:,:2], filtered_buffer[:,2])
 

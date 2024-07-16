@@ -32,7 +32,7 @@ class LoggingMetric:
     def on_episode_start(self, obs: Any, info: Dict[str, Any], episode: int) -> None:
         pass
 
-    def on_episode_end(self, timestep: int, episode: int) -> None:
+    def on_episode_end(self, timesteps: int, episode: int) -> None:
         pass
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
@@ -72,10 +72,10 @@ class LoggingWrapper(gym.Wrapper):
         obs, rew, term, trunc, info = super().step(action)
         for metric in self.metrics:
             metric.on_step(obs=obs, rew=rew, term=term, trunc=trunc, info=info, timestep=self.timestep)
+        self.timestep += 1
         if term or trunc:
             for metric in self.metrics:
-                metric.on_episode_end(timestep=self.timestep, episode=self.episode_count)
-        self.timestep += 1
+                metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
         LoggingWrapper.global_step += 1
         return obs, rew, term, trunc, info
     
@@ -95,12 +95,12 @@ class StandardLogger(LoggingMetric):
     def on_episode_start(self, obs: Any, info: Dict[str, Any], episode: int) -> None:
         self.cum_reward = 0
 
-    def on_episode_end(self, timestep: int, episode: int) -> None:
+    def on_episode_end(self, timesteps: int, episode: int) -> None:
         if self.summary_writer is not None:
             global_step = self.global_step_callback()
             self.summary_writer.add_scalar(self.episode_reward_label, self.cum_reward, global_step, summary_description="Cumulative episode reward")
-            self.summary_writer.add_scalar(self.average_reward_label, self.cum_reward / timestep, global_step, summary_description="Average reward per step")
-            self.summary_writer.add_scalar(self.length_reward_label, timestep, global_step, summary_description="Length of the episode")
+            self.summary_writer.add_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step, summary_description="Average reward per step")
+            self.summary_writer.add_scalar(self.length_reward_label, timesteps, global_step, summary_description="Length of the episode")
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         self.cum_reward += rew
