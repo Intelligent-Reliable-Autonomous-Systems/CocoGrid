@@ -72,7 +72,6 @@ if args.interactive:
 elif args.gym:
     import gymnasium as gym
     from gymnasium.wrappers.human_rendering import HumanRendering
-    from minimujo.utils.logging import LoggingWrapper, HeatmapLogger, get_minimujo_heatmap_loggers
     import numpy as np
     from pygame import key
     import pygame
@@ -83,6 +82,7 @@ elif args.gym:
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
 
+    # from minimujo.utils.logging import LoggingWrapper, HeatmapLogger, get_minimujo_heatmap_loggers
     # import tensorboardX
     # summary_writer = tensorboardX.SummaryWriter()
     # env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
