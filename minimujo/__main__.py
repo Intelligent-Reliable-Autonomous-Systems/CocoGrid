@@ -1,7 +1,6 @@
 import argparse
 
 from minimujo import minimujo_suite
-from minimujo.utils.visualize.obs_visualize import ObsVisualize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--interactive', '-i', action='store_true', help='Spawns a dm_control interactive viewer. Requires GLFW.')
@@ -83,13 +82,14 @@ elif args.gym:
     env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
-    # env = ObsVisualize(env)
 
-    import tensorboardX
-    summary_writer = tensorboardX.SummaryWriter()
-    env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
-    for logger in get_minimujo_heatmap_loggers(env, gamma=0.99):
-        env.subscribe_metric(logger)
+    # import tensorboardX
+    # summary_writer = tensorboardX.SummaryWriter()
+    # env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
+    # for logger in get_minimujo_heatmap_loggers(env, gamma=0.99):
+    #     env.subscribe_metric(logger)
+    from minimujo.state.goal_wrapper import GridPositionGoalWrapper
+    env = GridPositionGoalWrapper(env)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
