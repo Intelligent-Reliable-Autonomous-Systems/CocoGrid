@@ -1,4 +1,4 @@
-from typing import Any, SupportsFloat
+from typing import Any, Dict, Optional, SupportsFloat, Tuple
 import gymnasium as gym
 import numpy as np
 from minimujo.state.grid_abstraction import GridAbstraction
@@ -23,12 +23,12 @@ class GridPositionGoalWrapper(gym.Wrapper):
         new_high = np.concatenate([base_obs_space.high, [5,5]], axis=None)
         self.observation_space = gym.spaces.Box(low=new_low, high=new_high)
 
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    def reset(self, *args, **kwargs) -> Tuple[Any, Dict[str, Any]]:
         self.prev_goal = None
         self.prev_pos = None
-        return super().reset(seed=seed, options=options)
+        return super().reset(*args, **kwargs)
 
-    def step(self, action: Any) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
+    def step(self, action: Any) -> Tuple[Any, SupportsFloat, bool, bool, Dict[str, Any]]:
         obs, rew, term, trunc, info = super().step(action)
         
         abstract_state = GridAbstraction.from_minimujo_state(self.env.unwrapped.state)
