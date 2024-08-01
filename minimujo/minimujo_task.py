@@ -227,6 +227,8 @@ class MinimujoTask(composer.Task):
         self._cum_reward = 0
         self._subgoal_reward_decay = 0.05
         self._steps_since_last_subgoal = 0
+        
+        self._minimujo_arena.current_state = self._minimujo_arena.state_observer.get_state(physics)
 
     def _is_disallowed_contact(self, contact):
         set1, set2 = self._walker_nonfoot_geomids, self._ground_geomids

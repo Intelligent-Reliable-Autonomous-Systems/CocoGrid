@@ -32,8 +32,8 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
         walker = cmu_humanoid.CMUHumanoidPositionControlledV2020(
             observable_options={'egocentric_camera': dict(enabled=True)})
     elif walker_type == 'ant':
-        # walker = ant.Ant()
-        walker = Ant()
+        walker = ant.Ant()
+        # walker = Ant()
         environment_kwargs['xy_scale'] = max(2, environment_kwargs.get('xy_scale', 2))
         environment_kwargs['spawn_padding'] = 0.8
     elif walker_type == 'square':

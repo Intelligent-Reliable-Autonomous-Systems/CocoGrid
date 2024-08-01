@@ -98,9 +98,9 @@ class StandardLogger(LoggingMetric):
     def on_episode_end(self, timesteps: int, episode: int) -> None:
         if self.summary_writer is not None:
             global_step = self.global_step_callback()
-            self.summary_writer.add_scalar(self.episode_reward_label, self.cum_reward, global_step, summary_description="Cumulative episode reward")
-            self.summary_writer.add_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step, summary_description="Average reward per step")
-            self.summary_writer.add_scalar(self.length_reward_label, timesteps, global_step, summary_description="Length of the episode")
+            self.summary_writer.add_scalar(self.episode_reward_label, self.cum_reward, global_step)
+            self.summary_writer.add_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step)
+            self.summary_writer.add_scalar(self.length_reward_label, timesteps, global_step)
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         self.cum_reward += rew

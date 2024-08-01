@@ -73,6 +73,17 @@ class GridAbstraction:
         # print(self.walker_pos)
         return self.grid[self.walker_pos]
 
+    @staticmethod
+    def grid_distance_from_state(grid_pos, minimujo_state: MinimujoState):
+        wx = minimujo_state.pose[0] / minimujo_state.xy_scale
+        wy = -minimujo_state.pose[1] / minimujo_state.xy_scale
+
+        def clamp(x, a, b):
+            return max(a, min(x, b))
+        tx = clamp(wx, grid_pos[0], grid_pos[0]+1)
+        ty = clamp(wx, grid_pos[1], grid_pos[1]+1)
+
+        return (wx - tx)**2 + (wy - ty)**2
     
     @staticmethod
     def from_minimujo_state(minimujo_state: MinimujoState):
