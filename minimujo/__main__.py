@@ -14,7 +14,7 @@ parser.add_argument('--obs-type', '-o', type=str, default='top_camera', help="Wh
 parser.add_argument('--img-obs-format', default='0-255', help="What format should image outputs be? Options are '0-255' (uint8) and '0-1' (float)")
 parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="What type of reward should the environment emit? Options are 'sparse', 'sparse_cost', 'subgoal', 'subgoal_cost'")
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
-parser.add_argument('--scale', '-s', type=int, default=1, help="The arena scale (minimum based on walker type)")
+parser.add_argument('--scale', '-s', type=float, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--timesteps', '-t', type=int, default=200, help="The maximum number of timesteps before truncating")
 parser.add_argument('--random-spawn', action='store_true', help='The walker is randomly positioned on reset')
 parser.add_argument('--random-rotate', action='store_true', help='The walker is randomly oriented on reset')
@@ -88,8 +88,8 @@ elif args.gym:
     # env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
     # for logger in get_minimujo_heatmap_loggers(env, gamma=0.99):
     #     env.subscribe_metric(logger)
-    from minimujo.state.goal_wrapper import GridPositionGoalWrapper
-    env = GridPositionGoalWrapper(env)
+    # from minimujo.state.goal_wrapper import GridPositionGoalWrapper
+    # env = GridPositionGoalWrapper(env)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
@@ -114,6 +114,7 @@ elif args.gym:
     obs, _ = env.reset()
 
     print(f'Env has observation space {env.unwrapped.observation_space} and action space {env.unwrapped.action_space}')
+    print(f"Current task: {env.unwrapped.task}")
 
     num_steps = 0
     reward_sum = 0
@@ -187,6 +188,7 @@ elif args.gym:
             reward_sum = 0
             num_steps = 0
             term = trunc = False
+            print(f"Current task: {env.unwrapped.task}")
     print(env.unwrapped.range_mapping)
 
 elif args.minigrid:

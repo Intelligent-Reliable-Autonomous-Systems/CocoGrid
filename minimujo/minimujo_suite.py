@@ -14,6 +14,7 @@ from minimujo.minimujo_task import MinimujoTask
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 from minimujo.walkers.ant import Ant
+from minimujo.state.tasks import get_random_objects_task
 
 def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, seed=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
@@ -59,6 +60,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
     task = MinimujoTask(
         walker=walker,
         minimujo_arena=arena,
+        get_task_function=get_random_objects_task,
         physics_timestep=PHYSICS_TIMESTEP,
         control_timestep=CONTROL_TIMESTEP,
         contact_termination=False,

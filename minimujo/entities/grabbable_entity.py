@@ -52,7 +52,8 @@ class GrabbableEntity(composer.Entity):
         was_grabbed = self._is_grabbed
         self._is_grabbed = self._grabber.is_being_grabbed(self, physics)
         if self._is_grabbed:
-            physics.named.data.xfrc_applied[self.body_id.full_identifier] = self._grabber.get_magnet_force(self._position, physics)
+            vel = physics.bind(self._root_joints).qvel.base
+            physics.named.data.xfrc_applied[self.body_id.full_identifier] = self._grabber.get_magnet_force(self._position, vel, physics)
         if self._is_grabbed != was_grabbed:
             physics.bind(self._color_geoms).rgba = (self.light_rgba if self._is_grabbed else self.rgba)
 
@@ -61,10 +62,12 @@ class GrabbableEntity(composer.Entity):
     def get_object_state(self, physics):
         state: np.ndarray = np.zeros(16)
         bound_body = physics.bind(self.root_body)
+        bound_joints = physics.bind(self._root_joints)
         state[0] = self._object_idx
         state[1:4] = bound_body.xpos
         state[4:8] = bound_body.xquat
-        state[8:14] = bound_body.cvel
+        state[8:11] = bound_joints.qvel
+        state[11:14] = bound_body.cvel[3:]
         state[14] = self.color_idx
         state[15] = int(self._is_grabbed)
         return state

@@ -18,12 +18,11 @@ from minimujo.grabber import Grabber
 from minimujo.maze_arena import MazeArena
 from minimujo.minigrid.minigrid_manager import MinigridManager
 from minimujo.state.minimujo_state import MinimujoStateObserver
-from minimujo.state.tasks import grid_goal_task
 from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
-            random_spawn=False, spawn_padding=0.3, spawn_position=None, spawn_sampler=None, task_function=grid_goal_task, use_subgoal_rewards=False, dense_rewards=False, seed=None):
+            random_spawn=False, spawn_padding=0.3, spawn_position=None, spawn_sampler=None, use_subgoal_rewards=False, dense_rewards=False, seed=None):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -39,7 +38,6 @@ class MinimujoArena(MazeArena):
         self.spawn_padding = spawn_padding
         self.spawn_position = spawn_position
         self.spawn_sampler = spawn_sampler
-        self.task_function = task_function
         self._minigrid_seed = seed
 
         labmaze = get_labmaze_from_minigrid(self._minigrid)
@@ -217,13 +215,9 @@ class MinimujoArena(MazeArena):
         #     self._extrinsic_reward = reward
         #     self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self, dense=self._dense_rewards)
     
-    def after_step(self, physics, random_state):
+    def update_state(self, physics):
         self.previous_state = self.current_state
         self.current_state = self.state_observer.get_state(physics)
-        self._reward, self._termination = self.task_function(
-            self.previous_state,
-            self.current_state
-        )
 
     @property
     def walker_position(self):

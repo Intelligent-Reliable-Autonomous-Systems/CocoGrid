@@ -3,6 +3,7 @@ from dm_control import composer
 from dm_control.composer.observation import observable as observable_lib
 from dm_control.mujoco.wrapper import mjbindings
 import numpy as np
+from minimujo.state.tasks import get_grid_goal_task
 
 _NUM_RAYS = 10
 
@@ -20,6 +21,7 @@ class MinimujoTask(composer.Task):
                minimujo_arena,
                observation_type='top_camera',
                reward_type='sparse',
+               get_task_function=get_grid_goal_task,
                random_rotation=False,
                rotation_bias_factor=0,
                aliveness_reward=0.0,
@@ -60,6 +62,8 @@ class MinimujoTask(composer.Task):
         self._aliveness_threshold = aliveness_threshold
         self._contact_termination = contact_termination
         self._discount = 1.0
+
+        self.get_task_function = get_task_function
 
         self.set_timesteps(
             physics_timestep=physics_timestep, control_timestep=control_timestep)
@@ -213,7 +217,6 @@ class MinimujoTask(composer.Task):
         super().initialize_episode(physics, random_state)
         self._minimujo_arena.initialize_arena(physics, random_state)
         self._respawn(physics, random_state)
-        self._discount = 1.0
 
         walker_foot_geoms = set(self._walker.ground_contact_geoms)
         walker_nonfoot_geoms = [
@@ -224,9 +227,15 @@ class MinimujoTask(composer.Task):
         self._ground_geomids = set(
             physics.bind(self._minimujo_arena.ground_geoms).element_id)
         
+        self._discount = 1.0
         self._cum_reward = 0
+        self._reward = 0
+        self._termination = False
+
         self._subgoal_reward_decay = 0.05
         self._steps_since_last_subgoal = 0
+        self.task_function, self.task_description = self.get_task_function(self._minimujo_arena._minigrid)
+
         
         self._minimujo_arena.current_state = self._minimujo_arena.state_observer.get_state(physics)
 
@@ -263,10 +272,17 @@ class MinimujoTask(composer.Task):
                     break
         self._steps_since_last_subgoal += 1
 
+        self._minimujo_arena.update_state(physics)
+        self._reward, self._termination = self.task_function(
+            self._minimujo_arena.previous_state,
+            self._minimujo_arena.current_state
+        )
+        self._cum_reward += self._reward
+
     def should_terminate_episode(self, physics):
         # if self._walker.aliveness(physics) < self._aliveness_threshold:
         #     self._failure_termination = True
-        if self._minimujo_arena._termination:
+        if self._termination:
             self._discount = 0.0
             return True
         else:
@@ -274,10 +290,7 @@ class MinimujoTask(composer.Task):
 
     def get_reward(self, physics):
         del physics
-        # reward = self._reward_func(self._minimujo_arena._extrinsic_reward, self._minimujo_arena._intrinsic_reward)
-        self._cum_reward += self._minimujo_arena._reward
-
-        return self._minimujo_arena._reward
+        return self._reward
 
     def get_discount(self, physics):
         del physics
