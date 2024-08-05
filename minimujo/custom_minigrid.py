@@ -5,6 +5,8 @@ from minigrid.core.grid import Grid
 from minigrid.core.world_object import Goal, Box, Ball
 import numpy as np
 
+from minimujo.state.tasks import get_random_objects_task
+
 class UMazeEnv(MiniGridEnv):
 
     def __init__(
@@ -288,3 +290,7 @@ def register_custom_minigrid():
         id='MiniGrid-RandomObjects-v0',
         entry_point='minimujo.custom_minigrid:RandomObjectsEnv'
     )
+
+default_tasks = {
+    RandomObjectsEnv: get_random_objects_task
+}

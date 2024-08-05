@@ -8,13 +8,13 @@ from minimujo.dmc_gym import DMCGym
 import gymnasium
 from gymnasium.envs.registration import registry
 
-from minimujo.custom_minigrid import register_custom_minigrid
+from minimujo.custom_minigrid import register_custom_minigrid, default_tasks
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.minimujo_task import MinimujoTask
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 from minimujo.walkers.ant import Ant
-from minimujo.state.tasks import get_random_objects_task
+from minimujo.state.tasks import get_grid_goal_task
 
 def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, seed=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
@@ -22,7 +22,7 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
 
     environment_kwargs = environment_kwargs or {}
     task_kwargs = {}
-    task_keys = ['observation_type', 'reward_type', 'random_rotation']
+    task_keys = ['observation_type', 'reward_type', 'random_rotation', 'get_task_function']
     for key in task_keys:
         if key in environment_kwargs:
             task_kwargs[key] = environment_kwargs.pop(key)
@@ -57,10 +57,11 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
     CONTROL_TIMESTEP=0.03
     time_limit = CONTROL_TIMESTEP * timesteps - 0.00001 # subtrack a tiny amount due to precision error
 
+    if not 'get_task_function' in task_kwargs:
+        task_kwargs['get_task_function'] = default_task_registry.get(type(highEnv.unwrapped), get_grid_goal_task)
     task = MinimujoTask(
         walker=walker,
         minimujo_arena=arena,
-        get_task_function=get_random_objects_task,
         physics_timestep=PHYSICS_TIMESTEP,
         control_timestep=CONTROL_TIMESTEP,
         contact_termination=False,
@@ -91,6 +92,8 @@ SUITE = containers.TaggedTasks()
 
 register_custom_minigrid()
 minigrid_env_ids = [env_spec.id for env_spec in registry.values() if env_spec.id.startswith("MiniGrid")]
+
+default_task_registry = {**default_tasks}
 
 for minigrid_id in minigrid_env_ids:
     minimujo_id = minigrid_id.replace("MiniGrid", "Minimujo")
