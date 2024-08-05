@@ -34,7 +34,7 @@ def _spec_to_box(spec, dtype=np.float32):
     assert low.shape == high.shape
     return Box(low, high, dtype=low.dtype)
     
-def _spec_to_box_v3(spec, image_format=None):
+def _spec_to_box_v3(spec, image_format=None, dtype=np.float32):
     box_params = {}
     for s in spec:
         if type(s) == specs.Array:
@@ -47,7 +47,7 @@ def _spec_to_box_v3(spec, image_format=None):
             s_min = s_min.item()
         if np.ndim(s_max) == 0:
             s_max = s_max.item()
-        box = (s_min, s_max, s.shape, s.dtype)
+        box = (s_min, s_max, s.shape, dtype)
         if len(s.shape) == 3 and image_format == '0-1':
             box = (0, 1, s.shape, np.float32)
         if s.name:

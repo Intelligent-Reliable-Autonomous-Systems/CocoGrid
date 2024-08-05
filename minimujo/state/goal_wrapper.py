@@ -23,7 +23,7 @@ class GridPositionGoalWrapper(gym.Wrapper):
         assert isinstance(base_obs_space, gym.spaces.Box) and len(base_obs_space.shape) == 1
         new_low = np.concatenate([base_obs_space.low, [0,0]], axis=None)
         new_high = np.concatenate([base_obs_space.high, [5,5]], axis=None)
-        self.observation_space = gym.spaces.Box(low=new_low, high=new_high)
+        self.observation_space = gym.spaces.Box(low=new_low, high=new_high, dtype=base_obs_space.dtype)
 
     def reset(self, *args, **kwargs) -> Tuple[Any, Dict[str, Any]]:
         obs, info = super().reset(*args, **kwargs)
