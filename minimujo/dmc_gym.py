@@ -47,7 +47,7 @@ def _spec_to_box_v3(spec, image_format=None, dtype=np.float32):
             s_min = s_min.item()
         if np.ndim(s_max) == 0:
             s_max = s_max.item()
-        box = (s_min, s_max, s.shape, dtype)
+        box = (s_min, s_max, s.shape, s.dtype)
         if len(s.shape) == 3 and image_format == '0-1':
             box = (0, 1, s.shape, np.float32)
         if s.name:

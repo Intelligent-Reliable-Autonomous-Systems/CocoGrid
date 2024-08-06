@@ -4,18 +4,18 @@ import gym.spaces
 import gymnasium
 import numpy as np
 
-def gymnasium_space_to_gym(space: gymnasium.spaces.Space):
+def gymnasium_space_to_gym(space: gymnasium.spaces.Space, dtype: Type = None):
     if isinstance(space, gymnasium.spaces.Box):
         # gym Box doesn't like shape and low/high being vector
         shape = space.shape if np.isscalar(space.low) else None
-        return gym.spaces.Box(space.low, space.high, shape=shape, dtype=space.dtype)
+        return gym.spaces.Box(space.low, space.high, shape=shape, dtype=dtype or space.dtype)
     if isinstance(space, gymnasium.spaces.Discrete):
         return gym.spaces.Discrete(space.n, start=space.start)
     if isinstance(space, gymnasium.spaces.Dict):
         spaces = {key:gymnasium_space_to_gym(val) for key, val in space.spaces.items()}
         return gym.spaces.Dict(spaces)
     if isinstance(space, gymnasium.spaces.Tuple):
-        spaces = tuple([gymnasium_space_to_gym(val) for val in space.spaces])
+        spaces = tuple([gymnasium_space_to_gym(val, dtype) for val in space.spaces])
         return gym.spaces.Tuple(spaces)
     if isinstance(space, gymnasium.spaces.MultiBinary):
         return gym.spaces.MultiBinary(space.n)
@@ -40,11 +40,11 @@ def unwrap_env(env: gym.Env, cls: Type):
 
 class GymnasiumToGymWrapper(gym.Env):
 
-    def __init__(self, env: gymnasium.Env):
+    def __init__(self, env: gymnasium.Env, obs_dtype: Type = None):
         self._env = env
 
         self.metadata = env.metadata
-        self.observation_space = gymnasium_space_to_gym(env.observation_space)
+        self.observation_space = gymnasium_space_to_gym(env.observation_space, obs_dtype)
         self.action_space = gymnasium_space_to_gym(env.action_space)
 
     def reset(self, *args, **kwargs):
