@@ -19,7 +19,7 @@ class MinimujoTask(composer.Task):
     def __init__(self,
                walker,
                minimujo_arena,
-               observation_type='top_camera',
+               observation_type='pos,vel,walker',
                reward_type='sparse',
                get_task_function=get_grid_goal_task,
                random_rotation=False,

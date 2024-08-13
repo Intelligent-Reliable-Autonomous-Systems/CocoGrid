@@ -16,13 +16,13 @@ from minimujo.walkers.rolling_ball import RollingBallWithHead
 from minimujo.walkers.ant import Ant
 from minimujo.state.tasks import get_grid_goal_task
 
-def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, seed=None, environment_kwargs=None):
+def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None, environment_kwargs=None):
     highEnv = gymnasium.make(minigrid_id)
     highEnv.reset(seed=seed)
 
     environment_kwargs = environment_kwargs or {}
     task_kwargs = {}
-    task_keys = ['observation_type', 'reward_type', 'random_rotation', 'get_task_function']
+    task_keys = ['observation_type', 'reward_type', 'random_rotation', 'task_function', 'get_task_function']
     for key in task_keys:
         if key in environment_kwargs:
             task_kwargs[key] = environment_kwargs.pop(key)
@@ -57,6 +57,10 @@ def get_minimujo_env(minigrid_id, walker_type='rolling_ball', timesteps=200, see
     CONTROL_TIMESTEP=0.03
     time_limit = CONTROL_TIMESTEP * timesteps - 0.00001 # subtrack a tiny amount due to precision error
 
+    if 'task_function' in task_kwargs:
+        # the task function is the same every episode
+        task_function = task_kwargs.pop('task_function')
+        task_kwargs['get_task_function'] = lambda minigrid: task_function
     if not 'get_task_function' in task_kwargs:
         task_kwargs['get_task_function'] = default_task_registry.get(type(highEnv.unwrapped), get_grid_goal_task)
     task = MinimujoTask(

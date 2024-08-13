@@ -52,6 +52,7 @@ class LoggingWrapper(gym.Wrapper):
         self.timestep = 0
         self.max_timesteps = max_timesteps
         self.global_step_callback = lambda: LoggingWrapper.global_step
+        self.has_logged_episode = True
 
         standard_logger = StandardLogger(standard_label)
         self.subscribe_metric(standard_logger)
@@ -61,6 +62,10 @@ class LoggingWrapper(gym.Wrapper):
         metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
+        if not self.has_logged_episode:
+            self.has_logged_episode = True
+            for metric in self.metrics:
+                metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
         self.episode_count += 1
         self.timestep = 0
         obs, info = super().reset(seed=seed, options=options)
@@ -73,7 +78,9 @@ class LoggingWrapper(gym.Wrapper):
         for metric in self.metrics:
             metric.on_step(obs=obs, rew=rew, term=term, trunc=trunc, info=info, timestep=self.timestep)
         self.timestep += 1
+        self.has_logged_episode = False
         if term or trunc:
+            self.has_logged_episode = True
             for metric in self.metrics:
                 metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
         LoggingWrapper.global_step += 1

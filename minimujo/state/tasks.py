@@ -5,9 +5,10 @@ from minimujo.color import get_color_idx
 from minimujo.state.grid_abstraction import GridAbstraction
 from minimujo.state.minimujo_state import MinimujoState
 from minigrid.core.world_object import Box
+from minigrid.minigrid_env import MiniGridEnv
 
 
-def get_grid_goal_task(minimujo):
+def get_grid_goal_task(minigrid: MiniGridEnv):
     def grid_goal_task(prev_state: MinimujoState, cur_state: MinimujoState):
         grid_state = GridAbstraction.from_minimujo_state(cur_state)
         cell_value = grid_state.walker_grid_cell
