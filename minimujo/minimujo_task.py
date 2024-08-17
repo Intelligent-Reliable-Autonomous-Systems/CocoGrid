@@ -3,6 +3,7 @@ from dm_control import composer
 from dm_control.composer.observation import observable as observable_lib
 from dm_control.mujoco.wrapper import mjbindings
 import numpy as np
+from minimujo.state.observables import FullVectorSpecification
 from minimujo.state.tasks import get_grid_goal_task
 
 _NUM_RAYS = 10
@@ -20,7 +21,6 @@ class MinimujoTask(composer.Task):
                walker,
                minimujo_arena,
                observation_type='pos,vel,walker',
-               reward_type='sparse',
                get_task_function=get_grid_goal_task,
                random_rotation=False,
                rotation_bias_factor=0,
@@ -68,98 +68,16 @@ class MinimujoTask(composer.Task):
         self.set_timesteps(
             physics_timestep=physics_timestep, control_timestep=control_timestep)
         
-        self.observation_types = observation_type.split(',')
-
-        self._task_observables = collections.OrderedDict({})
-        scale = self._minimujo_arena.maze_width
-        if 'top_camera' in self.observation_types:
-            self._minimujo_arena.observables.get_observable('top_camera').enabled = True
-            self._task_observables.update({'top_camera': self._minimujo_arena.observables.get_observable('top_camera')})
-        if 'pos' in self.observation_types:
-            # freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
-            # if len(freejoints) > 0:
-            #     def get_walker_pos(physics):
-            #         walker_pos = physics.bind(freejoints[0]).qpos
-            #         return walker_pos
-            # else:
-            #     def get_walker_pos(physics):
-            #         walker_pos = physics.bind(self._walker.root_body).xpos
-            #         return walker_pos[:2]
-            def get_scaled_walker_pos(physics):
-                return get_walker_pos(physics) / scale
-            absolute_position = observable_lib.Generic(get_walker_pos)
-            absolute_position.enabled = True
-
-            self._task_observables.update({'abs_pos': absolute_position})
-        if 'vel' in self.observation_types:
-            # freejoints = [joint for joint in self._minimujo_arena.mjcf_model.find_all('joint') if joint.tag == 'freejoint']
-            # if len(freejoints) > 0:
-            #     def get_walker_vel(physics):
-            #         walker_vel = physics.bind(freejoints[0]).qvel
-            #         return walker_vel
-            # else:
-            #     def get_walker_vel(physics):
-            #         walker_vel = physics.bind(self._walker.root_joints).qvel
-            #         return walker_vel[:2]
-            absolute_velocity = observable_lib.Generic(get_walker_vel)
-            absolute_velocity.enabled = True
-
-            self._task_observables.update({'abs_vel': absolute_velocity})
-        if 'goal' in self.observation_types:
-            def get_goal_pos(physics):
-                col, row = self._minimujo_arena._minigrid_manager.get_final_goal_pos()
-                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2] / scale
-                # return np.array(goal_pos)
-            goal_position = observable_lib.Generic(get_goal_pos)
-            goal_position.enabled = True
-
-            self._task_observables.update({'goal_pos': goal_position})
-
-        if 'subgoal' in self.observation_types:
-            def get_goal_pos(physics):
-                col, row = self._minimujo_arena._minigrid_manager.get_current_goal_pos()
-                return self._minimujo_arena.minigrid_to_world_position(row, col)[:2] / scale
-                # return np.array(goal_pos)
-            goal_position = observable_lib.Generic(get_goal_pos)
-            goal_position.enabled = True
-
-            self._task_observables.update({'subgoal_pos': goal_position})
-
-        if 'walker' in self.observation_types:
-            for observable in self._walker.observables.proprioception:
-                observable.enabled = True
-        if 'sensor' in self.observation_types:
-            for observable in (self._walker.observables.kinematic_sensors +
-                            self._walker.observables.dynamic_sensors):
-                observable.enabled = True
-        if 'egocentric_camera' in self.observation_types:
-            # self._walker.observables.egocentric_camera.height = 64
-            # self._walker.observables.egocentric_camera.width = 64
-            self._walker.observables.egocentric_camera.enabled = True
-        walker_observables = {k:v for k,v in self._walker.observables.as_dict().items() if v.enabled}
-        self._task_observables.update(walker_observables)
-
-        self._cum_reward = 0
-
-        reward_func_map = {
-            'sparse': self._sparse_reward,
-            'sparse_cost': self._sparse_cost,
-            'subgoal': self._subgoal_reward,
-            'subgoal_cost': self._subgoal_cost,
-            'subgoal_dense': self._subgoal_reward # the dense flag has been set in arena
-        }
-        self.reward_type = reward_type
-        if not reward_type in reward_func_map:
-            raise Exception(f'reward_type {reward_type} must be one of {list(reward_func_map.keys())}')
-        self._reward_func = reward_func_map[reward_type]
+        self.observable_spec = FullVectorSpecification(self._minimujo_arena.get_state_observer(), self._minimujo_arena)
+        self.observable_spec.enable()
 
     @property
     def observables(self):
-        return self._task_observables
+        return self.observable_spec.observables
     
     @property
     def task_observables(self):
-        return self._task_observables
+        return self.observable_spec.observables
 
     @property
     def name(self):
@@ -228,7 +146,6 @@ class MinimujoTask(composer.Task):
             physics.bind(self._minimujo_arena.ground_geoms).element_id)
         
         self._discount = 1.0
-        self._cum_reward = 0
         self._reward = 0
         self._termination = False
 
@@ -270,14 +187,12 @@ class MinimujoTask(composer.Task):
                 if self._is_disallowed_contact(c):
                     self._failure_termination = True
                     break
-        self._steps_since_last_subgoal += 1
 
         self._minimujo_arena.update_state(physics)
         self._reward, self._termination = self.task_function(
             self._minimujo_arena.previous_state,
             self._minimujo_arena.current_state
         )
-        self._cum_reward += self._reward
 
     def should_terminate_episode(self, physics):
         # if self._walker.aliveness(physics) < self._aliveness_threshold:
@@ -295,19 +210,3 @@ class MinimujoTask(composer.Task):
     def get_discount(self, physics):
         del physics
         return self._discount
-    
-    def _sparse_reward(self, extrinsic, intrinsic):
-        return extrinsic
-        
-    def _sparse_cost(self, extrinsic, intrinsic):
-        return -1 * (extrinsic <= 0)
-
-    def _subgoal_reward(self, extrinsic, intrinsic):
-        return extrinsic + intrinsic
-    
-    def _subgoal_cost(self, extrinsic, intrinsic):
-        # if extrinsic > 0 or intrinsic > 0:
-        #     self._steps_since_last_subgoal = 0
-        # return extrinsic + np.exp(-self._subgoal_reward_decay * self._steps_since_last_subgoal) - 1
-        manager = self._minimujo_arena._minigrid_manager
-        return -len(manager._current_subgoals) / manager._subgoal_init_dist

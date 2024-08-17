@@ -51,7 +51,6 @@ class MinimujoStateObserver:
             observable.enabled = True
         self.walker_observables.update({k:v for k,v in walker.observables.as_dict().items() if v.enabled})
 
-
     def get_state(self, physics):
         """
         Get the grid, objects, pose, and walker states for the current physics state

@@ -151,7 +151,7 @@ class DMCGym(Env):
             environment_kwargs,
         )
         self.arena = self._env._task._minimujo_arena
-        self.is_image_obs = 'top_camera' in self._env._task.observation_types
+        self.is_image_obs = 'top_camera' in self._env._task.observables.keys()
 
         # placeholder to allow built in gymnasium rendering
         self.render_mode = render_mode

@@ -83,6 +83,9 @@ elif args.gym:
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
 
+    observation = env.unwrapped._env._task.observable_spec
+    print('observation', observation, observation.observables.keys())
+
     # from minimujo.utils.logging import LoggingWrapper, HeatmapLogger, get_minimujo_heatmap_loggers
     # import tensorboardX
     # summary_writer = tensorboardX.SummaryWriter()

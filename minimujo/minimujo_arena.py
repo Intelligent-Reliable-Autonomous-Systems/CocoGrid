@@ -16,7 +16,6 @@ from minimujo.entities.door_entity import DoorEntity
 from minimujo.entities.key_entity import KeyEntity
 from minimujo.grabber import Grabber
 from minimujo.maze_arena import MazeArena
-from minimujo.minigrid.minigrid_manager import MinigridManager
 from minimujo.state.minimujo_state import MinimujoStateObserver
 from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
@@ -55,9 +54,9 @@ class MinimujoArena(MazeArena):
         self.attach(self._grabber)
 
         self.create_entity_mjcf()
+        self.current_state = None
 
         self._walker_position = np.array([0,0,0])
-        # self._minigrid_manager = MinigridManager(self._minigrid, self._mini_entity_map, use_subgoal_rewards=use_subgoal_rewards)
         self._terminated = False
         self._extrinsic_reward = 0
         self._dense_rewards = dense_rewards
@@ -141,6 +140,12 @@ class MinimujoArena(MazeArena):
                 dir = 3
             door['dir'] = dir
 
+    def get_state_observer(self):
+        filtered_entities = [entities for key, entities in self._mini_entity_map.items() 
+            if key in [Key, Ball, Box, Door]]
+        objects = [entity['entity'] for entity in itertools.chain(*filtered_entities)]
+        return MinimujoStateObserver(self._minigrid, self.xy_scale, objects, self._walker)
+
     def initialize_arena_mjcf(self, random_state=None):
         if not self._already_initialized:
             self._minigrid.reset(seed=self._minigrid_seed)
@@ -152,10 +157,7 @@ class MinimujoArena(MazeArena):
             self.register_walker(self._walker, self._get_walker_pos)
         self._already_initialized = False
 
-        filtered_entities = [entities for key, entities in self._mini_entity_map.items() 
-            if key in [Key, Ball, Box, Door]]
-        objects = [entity['entity'] for entity in itertools.chain(*filtered_entities)]
-        self.state_observer = MinimujoStateObserver(self._minigrid, self.xy_scale, objects, self._walker)
+        self.state_observer = self.get_state_observer()
         self.current_state = None
     
     def initialize_arena(self, physics, random_state):
@@ -207,13 +209,6 @@ class MinimujoArena(MazeArena):
     def before_step(self, physics, random_state):
         if self.current_state is None:
             self.current_state = self.state_observer.get_state(physics)
-        # if self._walker:
-        #     self._walker_position = self._get_walker_pos(physics)[:3]
-        # if not self._terminated:
-        #     reward, terminated = self._minigrid_manager.sync_minigrid(self)
-        #     self._terminated = terminated
-        #     self._extrinsic_reward = reward
-        #     self._intrinsic_reward = self._minigrid_manager.subgoal_rewards(self, dense=self._dense_rewards)
     
     def update_state(self, physics):
         self.previous_state = self.current_state

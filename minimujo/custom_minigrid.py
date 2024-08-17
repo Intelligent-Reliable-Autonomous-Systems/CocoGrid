@@ -102,6 +102,7 @@ class RandomCornerEnv(MiniGridEnv):
 class RandomObjectsEnv(MiniGridEnv):
     def __init__(
         self,
+        num_objects = 1,
         max_steps: int = None,
         **kwargs,
     ):
@@ -119,6 +120,8 @@ class RandomObjectsEnv(MiniGridEnv):
             max_steps=max_steps,
             **kwargs,
         )
+        self._num_objects = num_objects
+        assert 1 <= num_objects <= 8
 
     @staticmethod
     def _gen_mission():
@@ -136,20 +139,20 @@ class RandomObjectsEnv(MiniGridEnv):
 
         positions = [(i, j) for i in range(1,width-1) for j in range(1,height-1)]
         positions.remove((width//2, height // 2))
-        num_objects = 3
-        for i in range(num_objects):
-            color = np.random.choice(['blue', 'red'])
-            cls = np.random.choice([Ball, Box])
-            pos_idx = np.random.randint(len(positions))
+        for i in range(self._num_objects):
+            color = self.np_random.choice(['blue', 'red'])
+            cls = self.np_random.choice([Ball, Box])
+            pos_idx = self.np_random.integers(0, len(positions))
             pos = positions[pos_idx]
             positions.remove(pos)
             self.put_obj(cls(color), *pos)
 
-            if i == num_objects-1:
-                target_pos_idx = np.random.randint(len(positions))
+            if i == self._num_objects-1:
+                target_pos_idx = self.np_random.integers(0, len(positions))
                 target_pos = positions[target_pos_idx]
                 positions.remove(target_pos)
                 self.target = (color, cls, *target_pos)
+                self.put_obj(Goal(), *target_pos)
 
     # def step(action):
     #     obs, _, _, trunc, info = super().step(action)
@@ -287,8 +290,18 @@ def register_custom_minigrid():
         entry_point='minimujo.custom_minigrid:WarehouseEnv'
     )
     register(
-        id='MiniGrid-RandomObjects-v0',
-        entry_point='minimujo.custom_minigrid:RandomObjectsEnv'
+        id='MiniGrid-RandomObjects-3-v0',
+        entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
+        kwargs={
+            'num_objects': 3
+        }
+    )
+    register(
+        id='MiniGrid-RandomObject-v0',
+        entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
+        kwargs={
+            'num_objects': 1
+        }
     )
 
 default_tasks = {

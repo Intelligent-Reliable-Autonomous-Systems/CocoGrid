@@ -65,24 +65,40 @@ class LoggingWrapper(gym.Wrapper):
         if not self.has_logged_episode:
             self.has_logged_episode = True
             for metric in self.metrics:
-                metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
+                try:
+                    metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
+                except:
+                    # logging should never break training
+                    pass
         self.episode_count += 1
         self.timestep = 0
         obs, info = super().reset(seed=seed, options=options)
         for metric in self.metrics:
-            metric.on_episode_start(obs=obs, info=info, episode=self.episode_count)
+            try:
+                metric.on_episode_start(obs=obs, info=info, episode=self.episode_count)
+            except:
+                # logging should never break training
+                pass
         return obs, info
 
     def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         obs, rew, term, trunc, info = super().step(action)
         for metric in self.metrics:
-            metric.on_step(obs=obs, rew=rew, term=term, trunc=trunc, info=info, timestep=self.timestep)
+            try:
+                metric.on_step(obs=obs, rew=rew, term=term, trunc=trunc, info=info, timestep=self.timestep)
+            except:
+                # logging should never break training
+                pass
         self.timestep += 1
         self.has_logged_episode = False
         if term or trunc:
             self.has_logged_episode = True
             for metric in self.metrics:
-                metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
+                try:
+                    metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
+                except:
+                    # logging should never break training
+                    pass
         LoggingWrapper.global_step += 1
         return obs, rew, term, trunc, info
     
