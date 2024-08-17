@@ -22,10 +22,14 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
 
     environment_kwargs = environment_kwargs or {}
     task_kwargs = {}
-    task_keys = ['observation_type', 'reward_type', 'random_rotation', 'task_function', 'get_task_function']
+    task_keys = ['observation_type', 'random_rotation', 'task_function', 'get_task_function']
     for key in task_keys:
         if key in environment_kwargs:
             task_kwargs[key] = environment_kwargs.pop(key)
+    
+    if 'reward_type' in environment_kwargs:
+        print('Deprecation Warning: reward_type is unused. specify the reward in the task function')
+        environment_kwargs.pop('reward_type')
 
     if walker_type == 'rolling_ball' or walker_type == 'ball':
         walker = RollingBallWithHead(initializer=tuple())

@@ -12,7 +12,6 @@ parser.add_argument('--detail', '-d', action='store_true', help='Gives detail ab
 parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
 parser.add_argument('--obs-type', '-o', type=str, default='pos,vel,walker', help="What type of observation should the environment emit? Options are 'top_camera', 'walker', 'pos'")
 parser.add_argument('--img-obs-format', default='0-255', help="What format should image outputs be? Options are '0-255' (uint8) and '0-1' (float)")
-parser.add_argument('--reward-type', '-r', type=str, default='sparse', help="What type of reward should the environment emit? Options are 'sparse', 'sparse_cost', 'subgoal', 'subgoal_cost'")
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=float, default=1, help="The arena scale (minimum based on walker type)")
 parser.add_argument('--timesteps', '-t', type=int, default=200, help="The maximum number of timesteps before truncating")
@@ -79,7 +78,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
+    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
 
@@ -247,8 +246,7 @@ elif args.framerate:
     N_TESTS = 5
     ensure_env()
     
-    #env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, reward_type=args.reward_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=N_STEPS)
-    env = gym.make(args.env)
+    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=N_STEPS)
 
     def run_env():
         print(f'Testing gym env {args.env} with observation_type {args.obs_type} for {N_STEPS} steps')
