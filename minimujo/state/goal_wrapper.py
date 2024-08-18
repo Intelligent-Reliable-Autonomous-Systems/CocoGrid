@@ -10,9 +10,13 @@ class GridPositionGoalWrapper(gym.Wrapper):
         if env_id == 'Minimujo-UMaze-v0':
             self.goal_seq = get_umaze_goals
             self.goal_obs_func = lambda abstract: abstract.walker_pos
+            goal_low = [0,0]
+            goal_high = [5,5]
         elif env_id == 'Minimujo-RandomObject-v0':
             self.goal_seq = get_randobj_goals
             self.goal_obs_func = lambda abstract: (*abstract.walker_pos, *(abstract.objects[0][1:3]), abstract.objects[0][4])
+            goal_low = [0, 0, 0, 0, 0]
+            goal_high = [5, 5, 5, 5, 1]
         else:
             raise Exception(f'There is no goal specification for env {env_id}')
         self.term_on_reach = term_on_reach
@@ -20,8 +24,8 @@ class GridPositionGoalWrapper(gym.Wrapper):
 
         base_obs_space = self.env.unwrapped.observation_space
         assert isinstance(base_obs_space, gym.spaces.Box) and len(base_obs_space.shape) == 1
-        new_low = np.concatenate([base_obs_space.low, [0,0]], axis=None)
-        new_high = np.concatenate([base_obs_space.high, [5,5]], axis=None)
+        new_low = np.concatenate([base_obs_space.low, goal_low], axis=None)
+        new_high = np.concatenate([base_obs_space.high, goal_high], axis=None)
         self.observation_space = gym.spaces.Box(low=new_low, high=new_high, dtype=base_obs_space.dtype)
 
     def reset(self, *args, **kwargs) -> Tuple[Any, Dict[str, Any]]:
