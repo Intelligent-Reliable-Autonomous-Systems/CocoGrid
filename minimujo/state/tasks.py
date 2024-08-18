@@ -12,9 +12,9 @@ def get_grid_goal_task(minigrid: MiniGridEnv):
     def grid_goal_task(prev_state: MinimujoState, cur_state: MinimujoState):
         grid_state = GridAbstraction.from_minimujo_state(cur_state)
         cell_value = grid_state.walker_grid_cell
-        if cell_value == GridAbstraction.GOAL_IDX:
+        if cell_value == GridAbstraction.GRID_GOAL:
             return 1, True
-        if cell_value == GridAbstraction.LAVA_IDX:
+        if cell_value == GridAbstraction.GRID_LAVA:
             return -1, True
         return 0, False
     return grid_goal_task, "Agent should reach goal tile"

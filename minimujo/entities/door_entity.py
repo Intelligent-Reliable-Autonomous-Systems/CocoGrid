@@ -130,5 +130,5 @@ class DoorEntity(composer.Entity):
         state[11] = physics.bind(self._door_hinge).qvel[0]
         # slots 12-13 are empty
         state[14] = self._color_idx
-        state[15] = self.is_locked
+        state[15] = self.is_locked * 2 + (not self.is_open)
         return state
