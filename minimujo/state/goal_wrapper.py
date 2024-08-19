@@ -50,9 +50,9 @@ class GridPositionGoalWrapper(gym.Wrapper):
         # TODO generalize planning
 
         # reward for subgoals
+        goal_idx = (len(self.goal_path) - self.goal_path.index(self.prev_goal) - 1) if self.prev_goal in self.goal_path else self.off_path_length
         if self.dense:
             dist = GridAbstraction.grid_distance_from_state(self.prev_goal.walker_pos, curr_state)
-            goal_idx = (len(self.goal_path) - self.goal_path.index(self.prev_goal) - 1) if self.prev_goal in self.goal_path else self.off_path_length
             rew = -(goal_idx + dist) / len(self.goal_path)
             rew = min(rew, -0.1 / len(self.goal_path))
             # print(dist, self.prev_goal, curr_state.pose[:2] / curr_state.xy_scale)
@@ -66,6 +66,13 @@ class GridPositionGoalWrapper(gym.Wrapper):
         new_goal = self.goal_seq(abstract_state)[0]
         self.prev_state = abstract_state
         self.prev_goal = new_goal
+
+        info['goal'] = new_goal
+        info['num_subgoals'] = goal_idx
+        info['frac_subgoals'] = goal_idx / len(self.goal_path)
+        # if len(new_goal.objects) > 0:
+        #     target_object_pos = self.goal_path[-1].objects[0][1:3]
+        #     curr_object_pos = 
 
         # if self.term_on_reach and pos == new_goal:
         #     term = True
