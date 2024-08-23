@@ -36,6 +36,20 @@ def ensure_env():
         print(f'Warning: {args.env} not a Minimujo environment')
         # raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
 
+def get_gym_env(args):
+    return gym.make(
+        args.env, 
+        seed=args.seed, 
+        walker_type=args.walker, 
+        image_observation_format=args.img_obs_format, 
+        observation_type=args.obs_type, 
+        xy_scale=args.scale, 
+        random_spawn=args.random_spawn, 
+        random_rotation=args.random_rotate, 
+        track_position=args.track, 
+        timesteps=args.timesteps
+    )
+
 if args.interactive:
     import os
     import dm_control.suite as suite
@@ -78,7 +92,7 @@ elif args.gym:
 
     ensure_env()
     
-    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=args.timesteps)
+    env = get_gym_env(args)
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
 
@@ -225,7 +239,7 @@ elif args.detail:
     minigrid_env_id = args.env.replace('Minimujo','MiniGrid')
     minigrid_env = gym.make(minigrid_env_id).unwrapped
 
-    minigrid_env.reset()
+    minigrid_env.reset(seed=args.seed)
 
     if type(minigrid_env) in CUSTOM_ENVS:
         print(f'{args.env} is a custom environment part of the Minimujo package\n')
@@ -245,7 +259,7 @@ elif args.framerate:
     N_TESTS = 5
     ensure_env()
     
-    env = gym.make(args.env, seed=args.seed, walker_type=args.walker, image_observation_format=args.img_obs_format, observation_type=args.obs_type, xy_scale=args.scale, random_spawn=args.random_spawn, random_rotation=args.random_rotate, track_position=args.track, timesteps=N_STEPS)
+    env = get_gym_env(args)
 
     def run_env():
         print(f'Testing gym env {args.env} with observation_type {args.obs_type} for {N_STEPS} steps')
