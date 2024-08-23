@@ -19,6 +19,10 @@ def get_color_rgba(color):
     logging.warn('INVALID COLOR', color)
     return DEFAULT_GREY
 
+def get_color_rgba_255(color):
+    color = get_color_rgba(color)
+    return [int(255 * c) for c in color]
+
 def get_light_variation(rgba):
     new_rgba = rgba.copy()
     for i in range(3):

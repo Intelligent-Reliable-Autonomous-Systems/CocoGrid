@@ -49,10 +49,6 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     else:
         raise Exception(f'walker_type {walker_type} not supported')
 
-    if task_kwargs.get('reward_type', None) in ['subgoal', 'subgoal_cost', 'subgoal_dense']:
-        environment_kwargs['use_subgoal_rewards'] = True
-    if task_kwargs.get('reward_type', None) in ['subgoal_dense']:
-        environment_kwargs['dense_rewards'] = True
     environment_kwargs['seed'] = seed
 
     arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
@@ -85,6 +81,8 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     return env
 
 def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
+    if 'box2d' in walker_type.lower():
+        return get_box2d_gym_env(task, walker_type, image_observation_format=image_observation_format, timesteps=timesteps, seed=seed, render_width=render_width, **env_kwargs)
     return DMCGym(
         domain=domain, 
         task=task, 
@@ -95,6 +93,18 @@ def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_f
         render_width=render_width,
         render_mode=render_mode,
         track_position=track_position)
+
+def get_box2d_gym_env(arena_id, walker_type, task_function = None, get_task_function = None, **env_kwargs):
+    from minimujo.box2d.gym import Box2DEnv
+    minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
+    minigrid_env = gymnasium.make(minigrid_id).unwrapped
+
+    if task_function is not None:
+        # the task function is the same every episode
+        get_task_function = lambda minigrid: task_function
+    elif get_task_function is None:
+        get_task_function = default_task_registry.get(type(minigrid_env), get_grid_goal_task)
+    return Box2DEnv(minigrid_env, walker_type, get_task_function, **env_kwargs)
 
 SUITE = containers.TaggedTasks()
 

@@ -82,7 +82,7 @@ elif args.gym:
     env.unwrapped.render_width = 480
     env.unwrapped.render_height = 480
 
-    print('Environment with observables ', env.unwrapped._env._task.observables.keys())
+    # print('Environment with observables ', env.unwrapped._env._task.observables.keys())
 
     # from minimujo.utils.logging import LoggingWrapper, HeatmapLogger, get_minimujo_heatmap_loggers
     # import tensorboardX
@@ -90,8 +90,8 @@ elif args.gym:
     # env = LoggingWrapper(env, summary_writer, max_timesteps=args.timesteps)
     # for logger in get_minimujo_heatmap_loggers(env, gamma=0.99):
     #     env.subscribe_metric(logger)
-    from minimujo.state.goal_wrapper import GridPositionGoalWrapper
-    env = GridPositionGoalWrapper(env, dense=True, env_id=args.env)
+    # from minimujo.state.goal_wrapper import GridPositionGoalWrapper
+    # env = GridPositionGoalWrapper(env, dense=True, env_id=args.env)
     env = HumanRendering(env)
 
     print('Controls: Move with WASD, grab with Space')
@@ -191,7 +191,7 @@ elif args.gym:
             num_steps = 0
             term = trunc = False
             print(f"Current task: {env.unwrapped.task}")
-    print(env.unwrapped.range_mapping)
+    # print(env.unwrapped.range_mapping)
 
 elif args.minigrid:
     import gymnasium as gym
@@ -241,7 +241,7 @@ elif args.framerate:
     import gymnasium as gym
     import timeit
 
-    N_STEPS = 200
+    N_STEPS = 1000
     N_TESTS = 5
     ensure_env()
     

@@ -16,3 +16,12 @@ def get_labmaze_from_minigrid(minigrid_env):
     labmaze_str = '\n'.join([''.join(row) for row in labmaze_matrix]) + '\n'
 
     return labmaze.FixedMazeWithRandomGoals(labmaze_str)
+
+def minigrid_tile_generator(minigrid_env, tile_type=None):
+    maze_width = minigrid_env.grid.width
+    maze_height = minigrid_env.grid.height
+    for x in range(maze_width):
+        for y in range(maze_height):
+            tile = minigrid_env.grid.get(x, y)
+            if tile is not None and tile_type is None or type(tile) == tile_type:
+                yield x, y, tile
