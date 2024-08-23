@@ -23,6 +23,10 @@ parser.add_argument('--episodes', type=int, default=1000, help="The number of ep
 
 parser.add_argument('--print-reward', action='store_true', help='Prints the reward and cumulative reward to the console')
 parser.add_argument('--print-obs', action='store_true', help='Prints the observation to the console')
+parser.add_argument('--test-steps', type=int, default=1000, help='For framerate test, number of steps per test')
+parser.add_argument('--num-tests', type=int, default=5, help='For framerate test, the number of tests to run')
+parser.add_argument('--sync-vec', type=int, default=0, help='If more than 0, how many environments to create in a SyncVectorEnv for framerate')
+parser.add_argument('--async-vec', type=int, default=0, help='If more than 0, how many environments to create in an AsyncVectorEnv for framerate')
 args = parser.parse_args()
 
 long_dash = "-----------------------------------------"
@@ -37,6 +41,7 @@ def ensure_env():
         # raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
 
 def get_gym_env(args):
+    import minimujo
     return gym.make(
         args.env, 
         seed=args.seed, 
@@ -255,22 +260,32 @@ elif args.framerate:
     import gymnasium as gym
     import timeit
 
-    N_STEPS = 1000
-    N_TESTS = 5
+    N_STEPS = args.test_steps
+    N_TESTS = args.num_tests
     ensure_env()
     
-    env = get_gym_env(args)
+    if args.sync_vec > 0:
+        from gymnasium.vector import SyncVectorEnv
+        num_envs = args.sync_vec
+        env = SyncVectorEnv([lambda: get_gym_env(args)] * args.sync_vec)
+    elif args.async_vec > 0:
+        from gymnasium.vector import AsyncVectorEnv
+        num_envs = args.async_vec
+        env = AsyncVectorEnv([lambda: get_gym_env(args)] * args.async_vec)
+    else:
+        num_envs = 1
+        env = get_gym_env(args)
 
     def run_env():
         print(f'Testing gym env {args.env} with observation_type {args.obs_type} for {N_STEPS} steps')
         env.reset()
 
-        for _ in range(N_STEPS):
+        for _ in range(0, N_STEPS, num_envs):
             action = env.action_space.sample()
             _, reward, term, trunc, _ = env.step(action)
             if reward is None:
                 print('WARNING: reward returned was None')
-            if term or trunc:
+            if isinstance(term, bool) and (term or trunc):
                 env.reset()
 
     total_time = timeit.timeit("run_env()", globals=locals(), number=N_TESTS)
