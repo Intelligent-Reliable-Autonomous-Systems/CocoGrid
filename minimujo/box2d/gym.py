@@ -44,7 +44,7 @@ class Box2DEnv(gym.Env):
     }
 
     def __init__(self, minigrid_env: gym.Env, walker_type: str, get_task_function: Callable, xy_scale: float = 1, 
-                 seed: int = None, render_mode='rgb_array', render_width=64, **kwargs) -> None:
+                 seed: int = None, timesteps: int = 500, render_mode='rgb_array', render_width=64, **kwargs) -> None:
         super().__init__()
 
         self.minigrid_env = minigrid_env
@@ -52,6 +52,7 @@ class Box2DEnv(gym.Env):
         self.xy_scale = xy_scale
         self.minigrid_seed = seed
 
+        self.max_timesteps = timesteps
         self.get_task_function = get_task_function
 
         self.screen = None
@@ -77,12 +78,24 @@ class Box2DEnv(gym.Env):
         circleShape.draw = my_draw_circle
 
         self._skip_initializing = True
+        self.world = None
         self._generate_arena()
         observation = get_full_vector_observation(self._get_state())
         self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=observation.shape, dtype=observation.dtype)
         self.action_space = gym.spaces.Box(-1., 1., (3,), dtype=np.float32)
 
     def _generate_arena(self):
+        if self.world is not None:
+            # Explicit memory clean up to prevent memory leaks
+            for body in self.world.bodies:
+                self.world.DestroyBody(body)
+            for joint in self.world.joints:
+                self.world.DestroyJoint(joint)
+
+            del self.agent
+            del self.world
+            del self._grid
+            del self.color_mapping
         self.world = world(gravity=(0, 0), doSleep=True)
 
         self.minigrid_env.reset(seed=self.minigrid_seed)
@@ -145,6 +158,7 @@ class Box2DEnv(gym.Env):
             self._generate_arena()
         self._skip_initializing = False
 
+        self.timesteps = 0
         self.task_function, self.task = self.get_task_function(self.minigrid_env)
         self._prev_state = self.state = self._get_state()
         return get_full_vector_observation(self.state), {}
@@ -163,7 +177,9 @@ class Box2DEnv(gym.Env):
         self._prev_state = self.state
         self.state = self._get_state()
         rew, finished = self.task_function(self._prev_state, self.state)
-        return get_full_vector_observation(self.state), rew, finished, False, {}
+
+        self.timesteps += 1
+        return get_full_vector_observation(self.state), rew, finished or self.timesteps >= self.max_timesteps, False, {}
     
     def _do_grab(self):
         def square_dist(x1, y1, x2, y2):

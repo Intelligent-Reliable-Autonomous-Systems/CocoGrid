@@ -9,6 +9,7 @@ from matplotlib.colors import LogNorm
 import numpy as np
 from tensorboardX import SummaryWriter
 
+from minimujo.dmc_gym import DMCGym
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.utils.logging import LoggingMetric, capped_cubic_logging_schedule
 from minimujo.utils.visualize.weighted_kde import WeightedKDEHeatmap
@@ -76,9 +77,14 @@ class HeatmapLogger(LoggingMetric):
 
 def get_minimujo_extent(env: gym.Env, without_border: bool = True):
     """Gets the extent of the heatmap figure, within the arena bounds"""
+    env = env.unwrapped
     border_off = int(without_border)
-    arena: MinimujoArena = env.unwrapped.arena
-    extent = (border_off, arena.maze_width - border_off, -(arena.maze_height - border_off), -border_off)
+    if isinstance(env, DMCGym):
+        arena: MinimujoArena = env.arena
+        extent = (border_off, arena.maze_width - border_off, -(arena.maze_height - border_off), -border_off)
+    else:
+        # box2d
+        extent = (border_off, env.arena_width - border_off, -(env.arena_height - border_off), -border_off)
     return extent
 
 def walker_xyz_transform(env, **kwargs):
