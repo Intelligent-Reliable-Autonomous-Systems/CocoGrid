@@ -137,11 +137,12 @@ class MinimujoLogger(LoggingMetric):
 
     def on_episode_end(self, timesteps: int, episode: int) -> None:
         if self.env is None:
+            print('[MinimujoLogger] Tried to call on_episode_end without subscribing')
             return
-        task = self.env.unwrapped._task
         if self.summary_writer is not None:
+            task = self.env.unwrapped._task
             global_step = self.global_step_callback()
-            self.summary_writer.add_scalar(self.task_reward_label, task.reward_total, global_step)
-            self.summary_writer.add_scalar(self.task_terminated_label, task.terminated, global_step)
+            self.summary_writer.add_scalar(self.task_reward_label, task.total_reward, global_step)
+            self.summary_writer.add_scalar(self.task_terminated_label, int(task.terminated), global_step)
 
 from minimujo.utils.logging.heatmap_logger import HeatmapLogger, get_minimujo_heatmap_loggers
