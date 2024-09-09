@@ -158,8 +158,9 @@ class Box2DEnv(gym.Env):
             self._generate_arena()
         self._skip_initializing = False
 
+        self._cum_reward = 0
         self.timesteps = 0
-        self.task_function, self.task = self.get_task_function(self.minigrid_env)
+        self._task = Task(*self.get_task_function(self.minigrid_env))
         self._prev_state = self.state = self._get_state()
         return get_full_vector_observation(self.state), {}
     
@@ -176,10 +177,14 @@ class Box2DEnv(gym.Env):
 
         self._prev_state = self.state
         self.state = self._get_state()
-        rew, finished = self.task_function(self._prev_state, self.state)
+        rew, finished = self._task(self._prev_state, self.state)
 
         self.timesteps += 1
         return get_full_vector_observation(self.state), rew, finished or self.timesteps >= self.max_timesteps, False, {}
+    
+    @property
+    def task(self):
+        return self._task.description
     
     def _do_grab(self):
         def square_dist(x1, y1, x2, y2):
@@ -313,3 +318,33 @@ class Box2DEnv(gym.Env):
             pygame.display.quit()
             self.isopen = False
             pygame.quit()
+
+class Task:
+    def __init__(self, task_function, description):
+        self._task_function = task_function
+        self._description = description
+        self._cum_reward = 0
+        self._terminated = False
+
+    @property
+    def description(self):
+        return self._description
+    
+    @property
+    def function(self):
+        return self._task_function
+    
+    @property
+    def terminated(self):
+        return self._terminated
+    
+    @property
+    def total_reward(self):
+        return self._cum_reward
+    
+    def __call__(self, prev_state, next_state):
+        rew, term = self._task_function(prev_state, next_state)
+        self._cum_reward += rew
+        self._terminated = self._terminated or term
+        return rew, term
+

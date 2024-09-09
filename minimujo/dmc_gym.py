@@ -227,7 +227,8 @@ class DMCGym(Env):
         if options:
             logging.warn("Currently doing nothing with options={:}".format(options))
         timestep = self._env.reset()
-        self.task = self._env._task.task_description
+        self._task = self._env._task
+        self.task = self._task.description
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
 

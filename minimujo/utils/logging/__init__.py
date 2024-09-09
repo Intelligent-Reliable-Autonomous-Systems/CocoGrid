@@ -128,4 +128,20 @@ class StandardLogger(LoggingMetric):
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         self.cum_reward += rew
 
+class MinimujoLogger(LoggingMetric):
+
+    def __init__(self, label_prefix: str = 'standard') -> None:
+        self.label_prefix = label_prefix
+        self.task_reward_label = f'{label_prefix}/task_reward'
+        self.task_terminated_label = f'{label_prefix}/task_terminated'
+
+    def on_episode_end(self, timesteps: int, episode: int) -> None:
+        if self.env is None:
+            return
+        task = self.env.unwrapped._task
+        if self.summary_writer is not None:
+            global_step = self.global_step_callback()
+            self.summary_writer.add_scalar(self.task_reward_label, task.reward_total, global_step)
+            self.summary_writer.add_scalar(self.task_terminated_label, task.terminated, global_step)
+
 from minimujo.utils.logging.heatmap_logger import HeatmapLogger, get_minimujo_heatmap_loggers
