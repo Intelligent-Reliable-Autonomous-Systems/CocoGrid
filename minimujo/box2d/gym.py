@@ -339,7 +339,7 @@ class Task:
         return self._terminated
     
     @property
-    def total_reward(self):
+    def reward_total(self):
         return self._cum_reward
     
     def __call__(self, prev_state, next_state):
