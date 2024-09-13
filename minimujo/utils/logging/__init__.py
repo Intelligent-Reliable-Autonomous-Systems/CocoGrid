@@ -40,7 +40,7 @@ class RunningStats:
     @property
     def variance(self):
         if self.n < 2:
-            return np.nan
+            return 0.0
         return self.M2 / self.n
 
     @property
@@ -73,9 +73,8 @@ class LoggingMetric:
         if self.is_eval:
             if global_step != self.eval_step:
                 # ensure previous scalars are flushed out
-                # self.log_accumulated_scalars()
                 self.eval_accumulators = {}
-                self.eval_step = None
+                self.eval_step = global_step
             if tag not in self.eval_accumulators:
                 self.eval_accumulators[tag] = RunningStats()
             self.eval_accumulators[tag].update(value)
@@ -115,7 +114,7 @@ class LoggingWrapper(gym.Wrapper):
 
     def subscribe_metric(self, metric: LoggingMetric):
         self.metrics.append(metric)
-        metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback)
+        metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback, is_eval=self.is_eval)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
         if not self.has_logged_episode:
