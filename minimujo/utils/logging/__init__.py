@@ -69,7 +69,7 @@ class LoggingMetric:
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         pass
 
-    def log_scalar(self, tag, value, global_step):
+    def log_scalar(self, tag, value, global_step, eval_metric: str = None):
         if self.is_eval:
             if global_step != self.eval_step:
                 # ensure previous scalars are flushed out
@@ -79,14 +79,27 @@ class LoggingMetric:
             if tag not in self.eval_accumulators:
                 self.eval_accumulators[tag] = RunningStats()
             self.eval_accumulators[tag].update(value)
-            self.log_accumulated_scalars()
+            self.log_accumulated_scalars(eval_metric)
             return
         self.summary_writer.add_scalar(tag, value, global_step)
 
-    def log_accumulated_scalars(self):
+    def log_accumulated_scalars(self, eval_metric: str = None):
         if not self.is_eval:
             return
         for tag, accumulator in self.eval_accumulators.items():
+            if eval_metric is not None:
+                if eval_metric == 'mean':
+                    value = accumulator.mean
+                elif eval_metric == 'min':
+                        value = accumulator.min
+                elif eval_metric == 'max':
+                        value = accumulator.max
+                elif eval_metric == 'std':
+                        value = accumulator.std
+                else:
+                    continue
+                self.summary_writer.add_scalar(tag, value, self.eval_step)
+                continue
             self.summary_writer.add_scalar(tag, accumulator.mean, self.eval_step)
             self.summary_writer.add_scalar(f'{tag}_min', accumulator.min, self.eval_step)
             self.summary_writer.add_scalar(f'{tag}_max', accumulator.max, self.eval_step)
@@ -95,6 +108,15 @@ class LoggingMetric:
 class LoggingWrapper(gym.Wrapper):
 
     global_step = 0
+    do_logging = True
+
+    @staticmethod
+    def freeze_logging():
+        LoggingWrapper.do_logging = False
+
+    @staticmethod
+    def resume_logging():
+        LoggingWrapper.do_logging = True
 
     def __init__(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int = 1000, standard_label: str = 'standard', is_eval: bool = False, raise_errors: bool = False):
         super().__init__(env)
@@ -115,9 +137,12 @@ class LoggingWrapper(gym.Wrapper):
 
     def subscribe_metric(self, metric: LoggingMetric):
         self.metrics.append(metric)
-        metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback)
+        metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback, is_eval=self.is_eval)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
+        if not LoggingWrapper.do_logging:
+            return super().reset(seed=seed, options=options)
+        
         if not self.has_logged_episode:
             self.has_logged_episode = True
             for metric in self.metrics:
@@ -141,6 +166,9 @@ class LoggingWrapper(gym.Wrapper):
 
     def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         obs, rew, term, trunc, info = super().step(action)
+        if not LoggingWrapper.do_logging:
+            return obs, rew, term, trunc, info
+
         for metric in self.metrics:
             try:
                 metric.on_step(obs=obs, rew=rew, term=term, trunc=trunc, info=info, timestep=self.timestep)
@@ -186,7 +214,7 @@ class StandardLogger(LoggingMetric):
             self.log_scalar(self.episode_reward_label, self.cum_reward, global_step)
             self.log_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step)
             self.log_scalar(self.length_reward_label, timesteps, global_step)
-            self.log_scalar(self.num_episodes_label, episode, global_step)
+            self.log_scalar(self.num_episodes_label, episode, global_step, eval_metric='max')
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         self.cum_reward += rew
