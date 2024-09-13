@@ -44,6 +44,7 @@ class Box2DEnv(gym.Env):
     }
 
     def __init__(self, minigrid_env: gym.Env, walker_type: str, get_task_function: Callable, xy_scale: float = 1, 
+                 spawn_position=None, spawn_sampler=None,
                  seed: int = None, timesteps: int = 500, render_mode='rgb_array', render_width=64, **kwargs) -> None:
         super().__init__()
 
@@ -51,6 +52,8 @@ class Box2DEnv(gym.Env):
         self.walker_type = walker_type
         self.xy_scale = xy_scale
         self.minigrid_seed = seed
+        self.spawn_position = spawn_position
+        self.spawn_sampler = spawn_sampler
 
         self.max_timesteps = timesteps
         self.get_task_function = get_task_function
@@ -145,8 +148,14 @@ class Box2DEnv(gym.Env):
                 self.color_mapping[box] = get_color_rgba_255(tile.color)
                 self.objects.append((box, 1, get_color_idx(tile.color)))
 
-        agent_x, agent_y = self.minigrid_env.agent_pos
-        self.agent = self.world.CreateDynamicBody(position=((agent_x + .5) * self.xy_scale, -(agent_y + .5) * self.xy_scale))
+        if self.spawn_position is not None:
+            pos = tuple(self.spawn_position)[:2]
+        elif self.spawn_sampler is not None:
+            pos = tuple(self.spawn_sampler())[:2]
+        else:
+            agent_x, agent_y = self.minigrid_env.agent_pos
+            pos = ((agent_x + .5) * self.xy_scale, -(agent_y + .5) * self.xy_scale)
+        self.agent = self.world.CreateDynamicBody(position=pos)
         # circle = self.agent.CreateCircleFixture(radius=0.4, density=1, friction=0.3)
         self.agent.CreatePolygonFixture(box=(.3, .3), density=1, friction=0.3)
         self.agent.linearDamping = 3

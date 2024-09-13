@@ -9,7 +9,7 @@ def add_minimujo_arguments(parser: argparse.ArgumentParser, **defaults):
     parser.add_argument('--random-rotate', action='store_true', help='The walker is randomly oriented on reset')
     parser.add_argument('--seed', type=int, default=defaults.get('seed', None), help='The random seed to be applied')
 
-def args_to_gym_env(args):
+def args_to_gym_env(args, **env_kwargs):
     import minimujo
     import gymnasium
     return gymnasium.make(
@@ -19,7 +19,8 @@ def args_to_gym_env(args):
         xy_scale=args.scale, 
         random_spawn=args.random_spawn, 
         random_rotation=args.random_rotate, 
-        timesteps=args.timesteps
+        timesteps=args.timesteps,
+        **env_kwargs
     )
 
 def get_pygame_action():

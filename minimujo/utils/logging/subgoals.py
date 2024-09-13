@@ -1,8 +1,6 @@
 
 
 from typing import Any, Dict
-from minimujo.state.goal_wrapper import GridPositionGoalWrapper
-from minimujo.utils.gym_wrapper import unwrap_env
 from minimujo.utils.logging import LoggingMetric
 
 
