@@ -40,8 +40,8 @@ class HeatmapLogger(LoggingMetric):
 
         self.current_episode = 0
 
-    def register(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int, global_step_callback: Callable = None):
-        super().register(env, summary_writer, max_timesteps, global_step_callback)
+    def register(self, env: gym.Env, summary_writer: SummaryWriter, max_timesteps: int, global_step_callback: Callable = None, is_eval: bool = False):
+        super().register(env, summary_writer, max_timesteps, global_step_callback, is_eval)
         self.buffer = np.zeros((max_timesteps, 3))
 
     def on_episode_start(self, obs: Any, info: Dict[str, Any], episode: int) -> None:

@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Dict, Tuple
 import gymnasium as gym
 from minigrid.core.world_object import Wall, Goal, Lava, Ball, Box, Key
 import numpy as np
@@ -173,7 +173,7 @@ class Box2DEnv(gym.Env):
         self._prev_state = self.state = self._get_state()
         return get_full_vector_observation(self.state), {}
     
-    def step(self, action: np.ndarray) -> tuple[Any, float, bool, bool, dict[str, Any]]:
+    def step(self, action: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         agent_vel = self.agent.linearVelocity.tuple
         if agent_vel[0]**2 + agent_vel[1]**2 < MAX_SPEED:
             self.agent.ApplyForceToCenter((MOVE_FORCE * float(action[2]), -MOVE_FORCE * float(action[1])), True)
