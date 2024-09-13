@@ -149,12 +149,13 @@ class Box2DEnv(gym.Env):
                 self.objects.append((box, 1, get_color_idx(tile.color)))
 
         if self.spawn_position is not None:
-            pos = tuple(self.spawn_position)[:2]
+            pos = self.spawn_position
         elif self.spawn_sampler is not None:
-            pos = tuple(self.spawn_sampler())[:2]
+            pos = self.spawn_sampler()
         else:
             agent_x, agent_y = self.minigrid_env.agent_pos
             pos = ((agent_x + .5) * self.xy_scale, -(agent_y + .5) * self.xy_scale)
+        pos = tuple([float(x) for x in pos[:2]]) # box2d doesn't like numpy scalars
         self.agent = self.world.CreateDynamicBody(position=pos)
         # circle = self.agent.CreateCircleFixture(radius=0.4, density=1, friction=0.3)
         self.agent.CreatePolygonFixture(box=(.3, .3), density=1, friction=0.3)

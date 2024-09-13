@@ -175,6 +175,7 @@ class StandardLogger(LoggingMetric):
         self.episode_reward_label = f'{label_prefix}/episode_reward'
         self.average_reward_label = f'{label_prefix}/average_reward'
         self.length_reward_label = f'{label_prefix}/episode_length'
+        self.num_episodes_label = f'{label_prefix}/num_episodes'
 
     def on_episode_start(self, obs: Any, info: Dict[str, Any], episode: int) -> None:
         self.cum_reward = 0
@@ -182,19 +183,17 @@ class StandardLogger(LoggingMetric):
     def on_episode_end(self, timesteps: int, episode: int) -> None:
         if self.summary_writer is not None:
             global_step = self.global_step_callback()
-            # self.summary_writer.add_scalar(self.episode_reward_label, self.cum_reward, global_step)
-            # self.summary_writer.add_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step)
-            # self.summary_writer.add_scalar(self.length_reward_label, timesteps, global_step)
             self.log_scalar(self.episode_reward_label, self.cum_reward, global_step)
             self.log_scalar(self.average_reward_label, self.cum_reward / timesteps, global_step)
             self.log_scalar(self.length_reward_label, timesteps, global_step)
+            self.log_scalar(self.num_episodes_label, episode, global_step)
 
     def on_step(self, obs: Any, rew: float, term: bool, trunc: bool, info: Dict[str, Any], timestep: int) -> None:
         self.cum_reward += rew
 
 class MinimujoLogger(LoggingMetric):
 
-    def __init__(self, label_prefix: str = 'standard') -> None:
+    def __init__(self, label_prefix: str = 'minimujo') -> None:
         self.label_prefix = label_prefix
         self.task_reward_label = f'{label_prefix}/task_reward'
         self.task_terminated_label = f'{label_prefix}/task_terminated'
@@ -204,8 +203,6 @@ class MinimujoLogger(LoggingMetric):
             return
         task = self.env.unwrapped._task
         global_step = self.global_step_callback()
-        # self.summary_writer.add_scalar(self.task_reward_label, task.reward_total, global_step)
-        # self.summary_writer.add_scalar(self.task_terminated_label, int(task.terminated), global_step)
         self.log_scalar(self.task_reward_label, task.reward_total, global_step)
         self.log_scalar(self.task_terminated_label, int(task.terminated), global_step)
 
