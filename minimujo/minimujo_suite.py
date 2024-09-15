@@ -60,7 +60,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     if 'task_function' in task_kwargs:
         # the task function is the same every episode
         task_function = task_kwargs.pop('task_function')
-        task_kwargs['get_task_function'] = lambda minigrid: task_function
+        task_kwargs['get_task_function'] = lambda minigrid: (task_function, '')
     if not 'get_task_function' in task_kwargs:
         task_kwargs['get_task_function'] = default_task_registry.get(type(highEnv.unwrapped), get_grid_goal_task)
     task = MinimujoTask(
@@ -101,7 +101,7 @@ def get_box2d_gym_env(arena_id, walker_type, task_function = None, get_task_func
 
     if task_function is not None:
         # the task function is the same every episode
-        get_task_function = lambda minigrid: task_function
+        get_task_function = lambda minigrid: (task_function, '')
     elif get_task_function is None:
         get_task_function = default_task_registry.get(type(minigrid_env), get_grid_goal_task)
     return Box2DEnv(minigrid_env, walker_type, get_task_function, **env_kwargs)

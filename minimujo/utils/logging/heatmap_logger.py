@@ -4,15 +4,13 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 import warnings
 
 import gymnasium as gym
-from matplotlib import pyplot as plt
-from matplotlib.colors import LogNorm
 import numpy as np
 from tensorboardX import SummaryWriter
 
 from minimujo.dmc_gym import DMCGym
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.utils.logging import LoggingMetric, capped_cubic_logging_schedule
-from minimujo.utils.visualize.weighted_kde import WeightedKDEHeatmap
+from minimujo.utils.visualize.weighted_kde import WeightedKDEHeatmap, get_heatmap_figure
 
 class HeatmapLogger(LoggingMetric):
 
@@ -33,7 +31,7 @@ class HeatmapLogger(LoggingMetric):
         self.extent = extent
         self.label = label
         self.is_log_scale = is_log_scale
-        self.norm = LogNorm() if is_log_scale else None
+        # self.norm = LogNorm() if is_log_scale else None
         self.should_log_density = should_log_density
         self.value_min = value_min
         self.value_max = value_max
@@ -56,13 +54,16 @@ class HeatmapLogger(LoggingMetric):
 
         if self.logging_schedule(episode):
             try:
-                figure, _ = plt.subplots()
-                logmap = self.heatmap.densitymap_normalized if self.should_log_density else self.heatmap.heatmap
-                plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
-                plt.colorbar(label=self.axes_label[2])
-                plt.title(f"{self.label} (Episode {episode})")
-                plt.xlabel(self.axes_label[0])
-                plt.ylabel(self.axes_label[1])
+                # figure, _ = plt.subplots()
+                # logmap = self.heatmap.densitymap_normalized if self.should_log_density else self.heatmap.heatmap
+                # plt.imshow(logmap, origin=self.origin_corner, cmap=self.color_map, extent=self.extent, norm=self.norm, vmin=self.value_min, vmax=self.value_max)
+                # plt.colorbar(label=self.axes_label[2])
+                # plt.title(f"{self.label} (Episode {episode})")
+                # plt.xlabel(self.axes_label[0])
+                # plt.ylabel(self.axes_label[1])
+                figure = get_heatmap_figure(self.heatmap, extent=self.extent, log_density=self.should_log_density, origin_corner=self.origin_corner, color_map=self.color_map,
+                    is_log_scale=self.is_log_scale, value_min=self.value_min, value_max=self.value_max,
+                    title=f"{self.label} (Episode {episode})", axis_labels=self.axes_label)
                 if self.summary_writer is not None:
                     self.summary_writer.add_figure(self.label, figure, self.global_step_callback(), True)
             except Exception as e:

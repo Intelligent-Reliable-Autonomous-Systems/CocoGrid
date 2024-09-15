@@ -1,6 +1,8 @@
 import warnings
 
 import numpy as np
+from matplotlib import pyplot as plt
+from matplotlib.colors import LogNorm
 
 class WeightedKDEHeatmap:
 
@@ -73,6 +75,17 @@ class WeightedKDEHeatmap:
     @property
     def densitymap_normalized(self):
         return self.densitymap / np.nansum(self.densitymap)
+    
+def get_heatmap_figure(heatmap: WeightedKDEHeatmap, extent=(0, 1, 0, 1), is_log_scale=False, origin_corner='lower', axis_labels=('X', 'Y', 'Value'), title='', color_map='plasma', value_min=None, value_max=None, log_density=False):
+    norm = LogNorm() if is_log_scale else None
+    figure, _ = plt.subplots()
+    logmap = heatmap.densitymap_normalized if log_density else heatmap.heatmap
+    plt.imshow(logmap, origin=origin_corner, cmap=color_map, extent=extent, norm=norm, vmin=value_min, vmax=value_max)
+    plt.colorbar(label=axis_labels[2])
+    plt.title(title)
+    plt.xlabel(axis_labels[0])
+    plt.ylabel(axis_labels[1])
+    return figure
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

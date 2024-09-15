@@ -1,13 +1,14 @@
 import argparse
 
-def add_minimujo_arguments(parser: argparse.ArgumentParser, **defaults):
+def add_minimujo_arguments(parser: argparse.ArgumentParser, include_seed=False, **defaults):
     parser.add_argument('--env', '-e', type=str, default=defaults.get('env', 'Minimujo-Empty-5x5-v0'), help='Specifies the Minimujo environment id.')
     parser.add_argument('--walker', '-w', type=str, default=defaults.get('walker', 'ball'), help="The type of the walker, from 'ball', 'ant', 'humanoid'")
     parser.add_argument('--scale', '-s', type=float, default=defaults.get('scale', 1), help="The arena scale (minimum based on walker type)")
     parser.add_argument('--timesteps', '-t', type=int, default=defaults.get('timesteps', 200), help="The maximum number of timesteps before truncating")
     parser.add_argument('--random-spawn', action='store_true', help='The walker is randomly positioned on reset')
     parser.add_argument('--random-rotate', action='store_true', help='The walker is randomly oriented on reset')
-    parser.add_argument('--seed', type=int, default=defaults.get('seed', None), help='The random seed to be applied')
+    if include_seed:
+        parser.add_argument('--seed', type=int, default=defaults.get('seed', None), help='The random seed to be applied')
 
 def args_to_gym_env(args, **env_kwargs):
     import minimujo

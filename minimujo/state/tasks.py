@@ -36,3 +36,6 @@ def get_random_objects_task(random_objects_env):
                     return 1, True
         return 0, False
     return object_to_position_task, f"Deliver a {color} {cls.__name__} to tile ({x}, {y})."
+
+def no_task_function(prev_state: MinimujoState, cur_state: MinimujoState):
+    return 0, False
