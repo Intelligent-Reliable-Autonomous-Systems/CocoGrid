@@ -75,7 +75,7 @@ class LoggingMetric:
                 # ensure previous scalars are flushed out
                 # self.log_accumulated_scalars()
                 self.eval_accumulators = {}
-                self.eval_step = None
+                self.eval_step = global_step
             if tag not in self.eval_accumulators:
                 self.eval_accumulators[tag] = RunningStats()
             self.eval_accumulators[tag].update(value)
@@ -132,8 +132,9 @@ class LoggingWrapper(gym.Wrapper):
         self.raise_errors = raise_errors
         self.is_eval = is_eval
 
-        standard_logger = StandardLogger(standard_label)
-        self.subscribe_metric(standard_logger)
+        if standard_label is not None:
+            standard_logger = StandardLogger(standard_label)
+            self.subscribe_metric(standard_logger)
 
     def subscribe_metric(self, metric: LoggingMetric):
         self.metrics.append(metric)
