@@ -4,7 +4,7 @@ from minigrid.core.world_object import Wall, Goal, Lava, Ball, Box, Key
 import numpy as np
 import pygame
 
-from minimujo.box2d.observation import get_full_vector_observation, get_full_vector_observation_space
+from minimujo.box2d.observation import get_full_vector_observation
 from minimujo.color import get_color_idx, get_color_rgba_255
 from minimujo.state.minimujo_state import MinimujoState, MinimujoStateObserver
 from minimujo.utils.minigrid import minigrid_tile_generator
@@ -54,6 +54,7 @@ class Box2DEnv(gym.Env):
         self.minigrid_seed = seed
         self.spawn_position = spawn_position
         self.spawn_sampler = spawn_sampler
+        self._start_state = None # if set, overrides the reset state
 
         self.max_timesteps = timesteps
         self.get_task_function = get_task_function
@@ -167,6 +168,8 @@ class Box2DEnv(gym.Env):
         if not self._skip_initializing:
             self._generate_arena()
         self._skip_initializing = False
+        if self._start_state is not None:
+            self._set_state(self._start_state)
 
         self._cum_reward = 0
         self.timesteps = 0
@@ -228,17 +231,10 @@ class Box2DEnv(gym.Env):
 
             target_pos = np.array(agent_pos) + 1 * target_vec
             target_diff = (target_pos - obj_pos)
-            magnitude = np.linalg.norm(target_diff)
-            # if magnitude > 0.3:
-            #     target_diff /= magnitude
             obj_vel = np.array(grabbed_obj.linearVelocity.tuple)
             force = GRAB_FORCE * target_diff - 5 * obj_vel
-            # print(obj_vel, force)
             
             grabbed_obj.ApplyForceToCenter(tuple(force.astype(float)), True)
-            
-        # directions = 
-        # self.agent.GetWorldVector((0,1))
     
     def _get_state(self):
         walker_pose = np.zeros(13, dtype=np.float32)
@@ -255,8 +251,22 @@ class Box2DEnv(gym.Env):
             object_array[index, 8:10] = obj.linearVelocity.tuple
             object_array[index, 11] = obj.angularVelocity
             object_array[index, 14:16] = (color_id, index == self.grabbed_object_idx)
-
+        
         return MinimujoState(self._grid, self.xy_scale, object_array, walker_pose, {})
+    
+    def _set_state(self, state: MinimujoState):
+        self.agent.position = tuple(state.pose[:2].tolist())
+        self.agent.angle = float(state.pose[4])
+        self.agent.linearVelocity = tuple(state.pose[7:9].tolist())
+        self.agent.angularVelocity = float(state.pose[9])
+
+        objects = state.objects
+        for obj_idx in range(objects.shape[0]):
+            obj, _, _ = self.objects[obj_idx]
+            obj.position = tuple(objects[obj_idx, 1:3].tolist())
+            obj.angle = float(objects[obj_idx, 4])
+            obj.linearVelocity = tuple(objects[obj_idx, 8:10].tolist())
+            obj.angularVelocity = float(objects[obj_idx, 11])
 
     def render(self, width=None, height=None):
         width = width or self.render_width
@@ -328,6 +338,9 @@ class Box2DEnv(gym.Env):
             pygame.display.quit()
             self.isopen = False
             pygame.quit()
+
+    def override_reset_state(self, state: MinimujoState):
+        self._start_state = state
 
 class Task:
     def __init__(self, task_function, description):

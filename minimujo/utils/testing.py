@@ -14,12 +14,12 @@ def args_to_gym_env(args, **env_kwargs):
     import minimujo
     import gymnasium
     return gymnasium.make(
-        args.env, 
-        seed=args.seed, 
+        args.env,
         walker_type=args.walker,
-        xy_scale=args.scale, 
-        random_spawn=args.random_spawn, 
-        random_rotation=args.random_rotate, 
+        seed=args.seed if hasattr(args, 'seed') else None,
+        xy_scale=args.scale,
+        random_spawn=args.random_spawn,
+        random_rotation=args.random_rotate,
         timesteps=args.timesteps,
         **env_kwargs
     )

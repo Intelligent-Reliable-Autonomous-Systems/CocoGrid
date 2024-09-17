@@ -21,3 +21,6 @@ def get_full_vector_observation(minimujo_state: MinimujoState, num_objects: int 
     object_arr = np.pad(flat, target_size - len(flat))
 
     return np.concatenate([minimujo_state.pose, object_arr, *minimujo_state.walker.values()])
+
+def full_vector_back_to_state(grid, xy_scale, obs):
+    return MinimujoState(grid, xy_scale, objects=np.reshape(obs[13:], (-1,16)), pose=obs[:13], walker={})
