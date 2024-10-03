@@ -77,15 +77,17 @@ class HeatmapLogger(LoggingMetric):
         ))
 
 def get_minimujo_extent(env: gym.Env, without_border: bool = True):
-    """Gets the extent of the heatmap figure, within the arena bounds"""
+    """Gets the extent of the heatmap figure, within the arena bounds, in the form (xmin, xmax, ymin, ymax)"""
     env = env.unwrapped
     border_off = int(without_border)
     if isinstance(env, DMCGym):
         arena: MinimujoArena = env.arena
-        extent = (border_off, arena.maze_width - border_off, -(arena.maze_height - border_off), -border_off)
+        scale = arena.xy_scale
+        extent = (border_off*scale, arena.maze_width - border_off*scale, -(arena.maze_height - border_off*scale), -border_off*scale)
     else:
         # box2d
-        extent = (border_off, env.arena_width - border_off, -(env.arena_height - border_off), -border_off)
+        scale = env.xy_scale
+        extent = (border_off*scale, env.arena_width - border_off*scale, -(env.arena_height - border_off*scale), -border_off*scale)
     return extent
 
 def walker_xyz_transform(env, **kwargs):
@@ -126,6 +128,11 @@ def final_step_end_transform(batch: np.ndarray, **kwargs):
     n = batch.shape[0]
     batch[:n-1,0] = np.nan
 
+def first_step_end_transform(batch: np.ndarray, **kwargs):
+    """Erases all steps except the first step. Useful for visualizing reset states"""
+    n = batch.shape[0]
+    batch[1:n,0] = np.nan
+
 def curry_returns_end_transform(gamma):
     """Curry an end_transform that takes a batch of step rewards and computes the discounted returns"""
     def returns_end_transform(batch: np.ndarray, **kwargs):
@@ -134,9 +141,9 @@ def curry_returns_end_transform(gamma):
             batch[t,2] += gamma * batch[t+1,2]
     return returns_end_transform
 
-def get_minimujo_heatmap_loggers(env: gym.Env, decay: float = 1, gamma: float = 1) -> List[HeatmapLogger]:
+def get_minimujo_heatmap_loggers(env: gym.Env, decay: float = 1, gamma: float = 1, without_border: bool = True) -> List[HeatmapLogger]:
     loggers = []
-    extent = get_minimujo_extent(env)
+    extent = get_minimujo_extent(env, without_border=without_border)
 
     loggers.append(HeatmapLogger(
         'walker_position_density_heatmap', 

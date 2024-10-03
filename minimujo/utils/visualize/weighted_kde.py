@@ -60,6 +60,7 @@ class WeightedKDEHeatmap:
             if clipped_size < self.kernel_size:
                 if clipped_size < 0:
                     # fully out of bounds
+                    print(f'Warning: failed to visualize {tuple((point / self.range_scale) + self.range_corner)} with value {value}')
                     continue
                 
             old_weight = np.nan_to_num(self.densitymap[y_start:y_end, x_start:x_end], copy=False)
