@@ -2,12 +2,15 @@ from __future__ import annotations
 from collections import deque
 import hashlib
 import pickle
+import re
 import sys
 from typing import List, Tuple
-import numpy as np
-from minimujo.color import COLOR_MAP
-from minimujo.state.minimujo_state import MinimujoState
 
+import gymnasium as gym
+import numpy as np
+from minimujo.color import COLOR_MAP, get_color_idx
+from minimujo.state.goal_wrapper import DjikstraBackwardsPlanner, GoalObserver, GoalWrapper
+from minimujo.state.minimujo_state import MinimujoState
 
 class GridAbstraction:
     ACTION_UP = 0
@@ -49,6 +52,9 @@ class GridAbstraction:
             self._grid_hash == other._grid_hash and \
             self._objects_hash == other._objects_hash
     
+    def __hash__(self) -> int:
+        return hash((*self.walker_pos, self._grid_hash, self._objects_hash))
+    
     def __repr__(self) -> str:
         obj_str = ','.join(map(GridAbstraction.pretty_object, self.objects))
         return f'Grid[{self.walker_pos}; {obj_str}]'
@@ -77,6 +83,13 @@ class GridAbstraction:
             idx, col, row, color, _ = new_objects[held_object]
             new_objects[held_object] = (idx, col, row, color, int(self._held_object == -1))
             return GridAbstraction(self.grid, self.walker_pos, new_objects)
+        
+    def get_neighbors(self):
+        actions = [GridAbstraction.ACTION_UP, GridAbstraction.ACTION_DOWN, GridAbstraction.ACTION_LEFT, GridAbstraction.ACTION_RIGHT, GridAbstraction.ACTION_GRAB]
+        neighbors = set([self.do_action(action) for action in actions])
+        if self in neighbors:
+            neighbors.remove(self)
+        return neighbors
 
     @property
     def walker_grid_cell(self):
@@ -131,6 +144,52 @@ class GridAbstraction:
             name = GridAbstraction.OBJECT_IDS[oid]
         color = list(COLOR_MAP.keys())[color_id]
         return f'[{color} {name} at ({col},{row}): {state}]'
+    
+    @staticmethod
+    def backward_neighbor_edges(state: GridAbstraction):
+        # we assume that actions are bidirectional. This should be the case, except maybe when objects are in the same cell
+        neighbors = state.get_neighbors()
+        return [(neighbor, 1) for neighbor in neighbors]
+    
+def get_minimujo_goal_wrapper(env: gym.Env, env_id: str, cls=GoalWrapper):
+    def abstraction_fn(obs, _env):
+        state = _env.unwrapped.state
+        return GridAbstraction.from_minimujo_state(state)
+    planner = DjikstraBackwardsPlanner(GridAbstraction.backward_neighbor_edges)
+    if 'RandomObject' in env_id:
+        def goal_fn(obs, abstract, _env):
+            task = _env.unwrapped._task
+            pattern = r"Deliver a (\w+) (\w+) to tile \((\d+), (\d+)\)\."
+            matches = re.search(pattern, task.description)
+
+            if not matches:
+                raise Exception(f"Task '{task}' does not meet specification for RandomObject")
+            color = matches.group(1)
+            color_idx = get_color_idx(color)
+            class_name = matches.group(2)
+            class_idx = ['Ball','Box'].index(class_name)
+            x = int(matches.group(3))
+            y = int(matches.group(4))
+            objects = abstract.objects.copy()
+            for idx, obj in enumerate(abstract.objects):
+                if obj[0] == class_idx and obj[3] == color_idx:
+                    objects[idx] = (obj[0], x, y, obj[3], 0)
+
+            return GridAbstraction(abstract.grid, (x, y), objects)
+        goal_obs_fn = lambda abstract: (*abstract.walker_pos, abstract._held_object)
+        low = [0, 0, 0, 0, 0]
+        high = [5, 5, 5, 5, 5]
+    else:
+        def goal_fn(obs, abstract, _env):
+            goal_idx = np.where(abstract.grid == GridAbstraction.GRID_GOAL)
+            goal_x, goal_y = goal_idx[0][0], goal_idx[1][0]
+            return GridAbstraction(abstract.grid, (goal_x, goal_y), abstract.objects)
+        goal_obs_fn = lambda abstract: abstract.walker_pos
+        low = [0, 0]
+        high = [np.inf, np.inf]
+    
+    observer = GoalObserver(goal_obs_fn, low, high)
+    return cls(env, abstraction_fn, goal_fn, planner, observer)
     
 class GridSolver:
 
