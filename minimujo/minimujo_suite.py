@@ -4,7 +4,7 @@ from dm_control import composer
 from dm_control.locomotion.walkers import ant, cmu_humanoid, jumping_ball
 from dm_control.locomotion.walkers.base import Walker
 from dm_control.utils import containers
-from minimujo.dmc_gym import DMCGym
+from minimujo.dmc_gym import MinimujoGym
 import gymnasium
 from gymnasium.envs.registration import registry
 
@@ -83,7 +83,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
 def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
     if 'box2d' in walker_type.lower():
         return get_box2d_gym_env(task, walker_type, image_observation_format=image_observation_format, timesteps=timesteps, seed=seed, render_width=render_width, **env_kwargs)
-    return DMCGym(
+    return MinimujoGym(
         domain=domain, 
         task=task, 
         task_kwargs=dict(walker_type=walker_type, timesteps=timesteps, seed=seed), 

@@ -8,6 +8,9 @@ import numpy as np
 from dm_control import suite
 from dm_env import specs
 
+from minimujo.minimujo_arena import MinimujoArena
+from minimujo.state.minimujo_state import MinimujoState
+
 
 def _spec_to_box(spec, dtype=np.float32):
     def extract_min_max(s):
@@ -135,6 +138,7 @@ class DMCGym(Env):
         rendering='egl',
         render_width=64,
         render_camera_id=0,
+        dmc_env=None,
         track_position=False
     ):
         """TODO comment up"""
@@ -144,14 +148,15 @@ class DMCGym(Env):
             assert rendering in ["glfw", "egl", "osmesa"]
             os.environ["MUJOCO_GL"] = rendering
 
-        self._env = suite.load(
-            domain,
-            task,
-            task_kwargs,
-            environment_kwargs,
-        )
-        self.arena = self._env._task._minimujo_arena
-        self.is_image_obs = 'top_camera' in self._env._task.observables.keys()
+        if dmc_env is None:
+            self._env = suite.load(
+                domain,
+                task,
+                task_kwargs,
+                environment_kwargs,
+            )
+        else:
+            self._env = dmc_env
 
         # placeholder to allow built in gymnasium rendering
         self.render_mode = render_mode
@@ -161,17 +166,14 @@ class DMCGym(Env):
 
         self.image_observation_format = image_observation_format
         self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values(), image_format=image_observation_format)
+        self.is_image_obs = False
         self._action_space = _spec_to_box([self._env.action_spec()])
 
         # set seed if provided with task_kwargs
-        if "random" in task_kwargs:
+        if "random" in (task_kwargs or {}):
             seed = task_kwargs["random"]
             self._observation_space.seed(seed)
             self._action_space.seed(seed)
-
-        self.track_position = track_position
-        self.trajectory = []
-        self._force_backup_render = False
 
     def __getattr__(self, name):
         """Add this here so that we can easily access attributes of the underlying env"""
@@ -189,29 +191,17 @@ class DMCGym(Env):
     def reward_range(self):
         """DMC always has a per-step reward range of (0, 1)"""
         return 0, 1
-    
-    @property
-    def state(self):
-        return self.arena.current_state
 
     def step(self, action):
         if action.dtype.kind == "f":
             action = action.astype(np.float32)
-        # if action[0] < 0:
-        #     # the grabber is in range [0,1]
-        #     action[0] = 0
-        assert self._action_space.contains(action), f'action {action} is not in action space {self.action_space}'
         timestep = self._env.step(action)
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
-        # observation = timestep.observation
         reward = timestep.reward
-        termination = self._env._task.should_terminate_episode(self._env._physics_proxy)  # we never reach a goal
+        termination = hasattr(self._env._task, "should_terminate_episode") and self._env._task.should_terminate_episode(self._env._physics_proxy)
         truncation = timestep.last() and not termination
         info = {"discount": timestep.discount}
-
-        if self.track_position:
-            self.trajectory.append(np.array(self.arena.walker_position))
 
         if self.is_image_obs and self.image_observation_format == '0-1':
             observation = (observation / 255.).astype(np.float32)
@@ -227,17 +217,54 @@ class DMCGym(Env):
         if options:
             logging.warn("Currently doing nothing with options={:}".format(options))
         timestep = self._env.reset()
-        self._task = self._env._task
-        self.task = self._task.description
         self.last_observation = timestep.observation
         observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
 
         if self.image_observation_format == '0-1':
             observation = (observation / 255.).astype(np.float32)
-        # observation = timestep.observation
         info = {}
         return observation, info
 
+    def render(self, height=None, width=None, camera_id=None):
+        height = height or self.render_height
+        width = width or self.render_width
+        try:
+            camera_id = camera_id or self.render_camera_id
+            image = self._env.physics.render(height=height, width=width, camera_id=camera_id)
+        except:
+            if 'top_camera' in self.last_observation:
+                image = self.last_observation['top_camera']
+            elif 'egocentric_camera' in self.last_observation:
+                image = self.last_observation['egocentric_camera']
+            else:
+                image = np.zeros((height, width, 3))
+        return image
+
+class MinimujoGym(DMCGym):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._task = self._env._task
+        
+        self.track_position = False
+        self.trajectory = []
+        self._force_backup_render = False
+    
+    @property
+    def state(self) -> MinimujoState:
+        """Get the raw Minimujo state representation"""
+        return self.arena.current_state
+    
+    @property
+    def task(self) -> str:
+        """Get a textual description of the current episode's task"""
+        return self._task.description
+    
+    @property
+    def arena(self) -> MinimujoArena:
+        """Get the internal arena object"""
+        return self._task._minimujo_arena
+    
     def render(self, height=None, width=None, camera_id=None):
         height = height or self.render_height
         width = width or self.render_width
@@ -267,12 +294,11 @@ class DMCGym(Env):
     def _get_backup_image(self, tile_size):
         # use a modified Minigrid rendering as a backup
 
-        arena = self._env._task._minimujo_arena
-        minigrid_env = arena._minigrid
+        minigrid_env = self.arena._minigrid
         # render the grid, but without the agent
         image = minigrid_env.grid.render(tile_size=tile_size, agent_pos=(-100,-100), highlight_mask=None)
         # get the continuous walker position mapped to continuous grid position
-        pos = arena.world_to_grid_positions([arena.walker_position])[0]
+        pos = self.arena.world_to_grid_positions([self.arena.walker_position])[0]
         # scale walker position and create a white box for the agent
         x, y = tuple((pos * tile_size + tile_size/2).astype(int))
         width = int(tile_size * 0.5 * 0.4)
