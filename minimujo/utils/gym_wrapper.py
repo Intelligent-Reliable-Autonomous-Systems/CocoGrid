@@ -60,3 +60,7 @@ class GymnasiumToGymWrapper(gym.Env):
     
     def __getattr__(self, name):
         return self._env.__getattr__(name)
+    
+    @property
+    def full_unwrapped(self):
+        return self._env.unwrapped
