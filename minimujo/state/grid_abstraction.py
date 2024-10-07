@@ -176,7 +176,9 @@ def get_minimujo_goal_wrapper(env: gym.Env, env_id: str, cls=GoalWrapper):
                     objects[idx] = (obj[0], x, y, obj[3], 0)
 
             return GridAbstraction(abstract.grid, (x, y), objects)
-        goal_obs_fn = lambda abstract: (*abstract.walker_pos, abstract._held_object)
+        def goal_obs_fn(abstract):
+            obj_pos = abstract.objects[abstract._held_object][1:3] if abstract._held_object >= 0 else (-1, -1)
+            return (*abstract.walker_pos, *obj_pos, abstract._held_object)
         low = [0, 0, 0, 0, 0]
         high = [5, 5, 5, 5, 5]
     else:
