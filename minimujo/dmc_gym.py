@@ -37,7 +37,7 @@ def _spec_to_box(spec, dtype=np.float32):
     assert low.shape == high.shape
     return Box(low, high, dtype=low.dtype)
     
-def _spec_to_box_v3(spec, image_format=None, dtype=np.float32):
+def _spec_to_box_v3(spec, image_format=None, dtype=np.float32, flatten_threshold=100):
     box_params = {}
     for s in spec:
         if type(s) == specs.Array:
@@ -72,8 +72,11 @@ def _spec_to_box_v3(spec, image_format=None, dtype=np.float32):
     for name, box in box_params.items():
         s_min, s_max, shape, dtype = box
         if len(shape) > 1:
-            boxes[name] = Box(*box)
-            continue
+            if np.prod(shape) < flatten_threshold:
+                shape = (np.prod(shape),)
+            else:
+                boxes[name] = Box(*box)
+                continue
         elif len(shape) == 0:
             shape = (1,)
         n = shape[0]
@@ -88,7 +91,7 @@ def _spec_to_box_v3(spec, image_format=None, dtype=np.float32):
         single_dim_dtype = np.promote_types(single_dim_dtype, dtype)
          
     if vector_dim > 0:
-        boxes['walker'] = Box(single_dim_min, single_dim_max, (vector_dim,), single_dim_dtype)
+        boxes['vector'] = Box(single_dim_min, single_dim_max, (vector_dim,), single_dim_dtype)
 
     if len(boxes.keys()) > 1:
         return Dict(boxes), range_mapping, vector_dim
@@ -112,8 +115,8 @@ def _flatten_obs_v2(obs, range_mapping, n):
     if n > 0:
         vector = np.zeros(n)
         for key, slice in range_mapping.items():
-            vector[slice[0]:slice[1]] = np.atleast_1d(obs_copy.pop(key))
-        obs_copy['walker'] = vector
+            vector[slice[0]:slice[1]] = np.atleast_1d(obs_copy.pop(key)).flatten()
+        obs_copy['vector'] = vector
 
     if len(obs_copy.keys()) > 1:
         return obs_copy
@@ -239,6 +242,13 @@ class DMCGym(Env):
             else:
                 image = np.zeros((height, width, 3))
         return image
+    
+    def index_obs_as_dict(self, observation: np.ndarray, key: str):
+        """Since dict observations are flattened, this gets the original values by key"""
+        idx_min, idx_max = self.range_mapping.get(key, (-1, -1))
+        if idx_min < 0:
+            return None
+        return observation[idx_min:idx_max]
 
 class MinimujoGym(DMCGym):
 

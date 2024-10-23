@@ -9,7 +9,7 @@ from typing import List, Tuple
 import gymnasium as gym
 import numpy as np
 from minimujo.color import COLOR_MAP, get_color_idx
-from minimujo.state.goal_wrapper import DjikstraBackwardsPlanner, GoalObserver, GoalWrapper
+from minimujo.state.goal_wrapper import DeterministicValueIterationPlanner, DjikstraBackwardsPlanner, GoalObserver, GoalWrapper
 from minimujo.state.minimujo_state import MinimujoState
 
 class GridAbstraction:
@@ -18,6 +18,7 @@ class GridAbstraction:
     ACTION_DOWN = 2
     ACTION_RIGHT = 3
     ACTION_GRAB = 4
+    ACTIONS = [ACTION_UP, ACTION_LEFT, ACTION_DOWN, ACTION_RIGHT, ACTION_GRAB]
     OBJECT_IDS = ['ball', 'box', 'door', 'key']
     DOOR_IDX = 2
     GRID_EMPTY = 0
@@ -85,8 +86,7 @@ class GridAbstraction:
             return GridAbstraction(self.grid, self.walker_pos, new_objects)
         
     def get_neighbors(self):
-        actions = [GridAbstraction.ACTION_UP, GridAbstraction.ACTION_DOWN, GridAbstraction.ACTION_LEFT, GridAbstraction.ACTION_RIGHT, GridAbstraction.ACTION_GRAB]
-        neighbors = set([self.do_action(action) for action in actions])
+        neighbors = set([self.do_action(action) for action in GridAbstraction.ACTIONS])
         if self in neighbors:
             neighbors.remove(self)
         return neighbors
@@ -192,6 +192,58 @@ def get_minimujo_goal_wrapper(env: gym.Env, env_id: str, cls=GoalWrapper):
     
     observer = GoalObserver(goal_obs_fn, low, high)
     return cls(env, abstraction_fn, goal_fn, planner, observer)
+
+def get_minimujo_goal_wrapper_2(env: gym.Env, env_id: str, cls=GoalWrapper):
+    def abstraction_fn(obs, _env):
+        state = _env.unwrapped.state
+        return GridAbstraction.from_minimujo_state(state)
+    planner = DeterministicValueIterationPlanner(GridAbstraction.ACTIONS, lambda state, action: state.do_action(action))
+    if 'RandomObject' in env_id:
+        def task_fn(obs, abstract, _env):
+            """This returns a function that checks if the specified object is delivered to the goal"""
+            task = _env.unwrapped._task
+            pattern = r"Deliver a (\w+) (\w+) to tile \((\d+), (\d+)\)\."
+            matches = re.search(pattern, task.description)
+
+            if not matches:
+                raise Exception(f"Task '{task}' does not meet specification for RandomObject")
+            color = matches.group(1)
+            color_idx = get_color_idx(color)
+            class_name = matches.group(2)
+            class_idx = ['Ball','Box'].index(class_name)
+            x = int(matches.group(3))
+            y = int(matches.group(4))
+            target = (class_idx, x, y, color_idx, 0)
+            def task_status(abstract):
+                if abstract.walker_grid_cell == GridAbstraction.GRID_LAVA:
+                    return -1, True
+                for obj in abstract.objects:
+                    if obj == target:
+                        return 1, True
+                return 0, False
+            return task_status
+        
+        def goal_obs_fn(abstract):
+            obj_pos = abstract.objects[abstract._held_object][1:3] if abstract._held_object >= 0 else (-1, -1)
+            return (*abstract.walker_pos, *obj_pos, abstract._held_object)
+        low = [0, 0, 0, 0, 0]
+        high = [5, 5, 5, 5, 5]
+    else:
+        def task_fn(obs, abstract, _env):
+            def test_status(abstract):
+                if abstract.walker_grid_cell == GridAbstraction.GRID_LAVA:
+                    return -1, True
+                if abstract.walker_grid_cell == GridAbstraction.GRID_GOAL:
+                    return 1, True
+                return 0, False
+            return test_status
+        
+        goal_obs_fn = lambda abstract: abstract.walker_pos
+        low = [0, 0]
+        high = [np.inf, np.inf]
+    
+    observer = GoalObserver(goal_obs_fn, low, high)
+    return cls(env, abstraction_fn, task_fn, planner, observer)
     
 class GridSolver:
 
