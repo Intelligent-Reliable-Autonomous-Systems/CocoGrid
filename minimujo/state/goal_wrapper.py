@@ -60,6 +60,8 @@ class GoalWrapper(gym.Wrapper):
         rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost)
 
         info['goal'] = self.subgoal
+        info['goal_achieved'] = abstract_state == prev_subgoal
+        info['is_new_goal'] = prev_subgoal != self.subgoal
         info['num_subgoals'] = self._planner.cost
         info['frac_subgoals'] = self._planner.cost / self._initial_plan_cost
         
