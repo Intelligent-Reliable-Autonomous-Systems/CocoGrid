@@ -21,7 +21,8 @@ class GoalWrapper(gym.Wrapper):
         abstraction: Callable[[Observation, gym.Env], AbstractState], 
         task_getter: Callable[[Observation, AbstractState, gym.Env], Task],
         planner: SubgoalPlanner,
-        observer: GoalObserver
+        observer: GoalObserver,
+        use_base_reward: bool = True
     ) -> None:
         super().__init__(env)
         
@@ -29,6 +30,7 @@ class GoalWrapper(gym.Wrapper):
         self._abstraction = abstraction
         self._planner = planner
         self._observer = observer
+        self._use_base_reward = use_base_reward
 
         base_obs_space = self.env.unwrapped.observation_space
         self.observation_space = observer.transform_observation_space(base_obs_space)
@@ -57,13 +59,16 @@ class GoalWrapper(gym.Wrapper):
         self._planner.update_state(abstract_state)
         self._planner.update_plan()
 
+        info['task_reward'] = rew
+        if not self._use_base_reward:
+            rew = 0
         rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost)
 
         info['goal'] = self.subgoal
         info['goal_achieved'] = abstract_state == prev_subgoal
         info['is_new_goal'] = prev_subgoal != self.subgoal
         info['num_subgoals'] = self._planner.cost
-        info['frac_subgoals'] = self._planner.cost / self._initial_plan_cost
+        info['frac_subgoals'] = self._planner.cost / self._initial_plan_cost if self._initial_plan_cost != 0 else 0
         
         return np.concatenate([obs, self._observer.observe(self.subgoal)]), rew, term, trunc, info
     
