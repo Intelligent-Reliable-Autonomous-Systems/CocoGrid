@@ -80,21 +80,22 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     )
     return env
 
-def get_gym_env_from_suite(domain, task, walker_type='ball', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
+def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='no-arena', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
     if 'box2d' in walker_type.lower():
-        return get_box2d_gym_env(task, walker_type, image_observation_format=image_observation_format, timesteps=timesteps, seed=seed, render_width=render_width, **env_kwargs)
+        return get_box2d_gym_env(task, walker_type, observation_type=observation_type, image_observation_format=image_observation_format, timesteps=timesteps, seed=seed, render_width=render_width, **env_kwargs)
     return MinimujoGym(
         domain=domain, 
         task=task, 
         task_kwargs=dict(walker_type=walker_type, timesteps=timesteps, seed=seed), 
         environment_kwargs=env_kwargs, 
+        observation_type=observation_type,
         image_observation_format=image_observation_format,
         rendering=None, 
         render_width=render_width,
         render_mode=render_mode,
         track_position=track_position)
 
-def get_box2d_gym_env(arena_id, walker_type, task_function = None, get_task_function = None, **env_kwargs):
+def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_function = None, get_task_function = None, **env_kwargs):
     from minimujo.box2d.gym import Box2DEnv
     minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
     minigrid_env = gymnasium.make(minigrid_id).unwrapped
@@ -104,7 +105,7 @@ def get_box2d_gym_env(arena_id, walker_type, task_function = None, get_task_func
         get_task_function = lambda minigrid: (task_function, '')
     elif get_task_function is None:
         get_task_function = default_task_registry.get(type(minigrid_env), get_grid_goal_task)
-    return Box2DEnv(minigrid_env, walker_type, get_task_function, **env_kwargs)
+    return Box2DEnv(minigrid_env, walker_type, get_task_function, observation_type=observation_type, **env_kwargs)
 
 SUITE = containers.TaggedTasks()
 

@@ -10,7 +10,7 @@ parser.add_argument('--list', '-l', action='store_true', help='Print a list of e
 parser.add_argument('--env', '-e', type=str, default='Minimujo-Empty-5x5-v0', help='Specifies the Minimujo environment id.')
 parser.add_argument('--detail', '-d', action='store_true', help='Gives detail about an environment.')
 parser.add_argument('--framerate', '-f', action='store_true', help='Measures the framerate of the Minimujo environment.')
-parser.add_argument('--obs-type', '-o', type=str, default='pos,vel,walker', help="What type of observation should the environment emit? Options are 'top_camera', 'walker', 'pos'")
+parser.add_argument('--obs-type', '-o', type=str, default='full', help="What type of observation should the environment emit? Options are 'top_camera', 'walker', 'pos'")
 parser.add_argument('--img-obs-format', default='0-255', help="What format should image outputs be? Options are '0-255' (uint8) and '0-1' (float)")
 parser.add_argument('--walker', '-w', type=str, default='ball', help="The type of the walker, from 'ball', 'ant', 'humanoid'")
 parser.add_argument('--scale', '-s', type=float, default=1, help="The arena scale (minimum based on walker type)")

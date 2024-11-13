@@ -10,7 +10,7 @@ from dm_env import specs
 
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.state.minimujo_state import MinimujoState
-
+from minimujo.state.observation import get_observation_spec
 
 def _spec_to_box(spec, dtype=np.float32):
     def extract_min_max(s):
@@ -142,7 +142,6 @@ class DMCGym(Env):
         render_width=64,
         render_camera_id=0,
         dmc_env=None,
-        track_position=False
     ):
         """TODO comment up"""
 
@@ -167,10 +166,11 @@ class DMCGym(Env):
         self.render_width = render_width
         self.render_camera_id = render_camera_id
 
-        self.image_observation_format = image_observation_format
-        self._observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values(), image_format=image_observation_format)
-        self.is_image_obs = False
         self._action_space = _spec_to_box([self._env.action_spec()])
+
+        self.is_image_obs = False
+        self.image_observation_format = image_observation_format
+        self._observation_space, self._observation_function = self._get_observation_space()
 
         # set seed if provided with task_kwargs
         if "random" in (task_kwargs or {}):
@@ -181,7 +181,17 @@ class DMCGym(Env):
     def __getattr__(self, name):
         """Add this here so that we can easily access attributes of the underlying env"""
         return getattr(self._env, name)
-
+    
+    def _get_observation_space(self):
+        observation_space, self.range_mapping, self.vector_dim = _spec_to_box_v3(self._env.observation_spec().values(), image_format=self.image_observation_format)
+        norm_image = self.is_image_obs and self.image_observation_format == '0-1'
+        def obs_func(timestep):
+            observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
+            if norm_image:
+                observation = (observation / 255.).astype(np.float32)
+            return observation
+        return observation_space, obs_func
+        
     @property
     def observation_space(self):
         return self._observation_space
@@ -200,14 +210,12 @@ class DMCGym(Env):
             action = action.astype(np.float32)
         timestep = self._env.step(action)
         self.last_observation = timestep.observation
-        observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
+        observation = self._observation_function(timestep)
+
         reward = timestep.reward
         termination = hasattr(self._env._task, "should_terminate_episode") and self._env._task.should_terminate_episode(self._env._physics_proxy)
         truncation = timestep.last() and not termination
         info = {"discount": timestep.discount}
-
-        if self.is_image_obs and self.image_observation_format == '0-1':
-            observation = (observation / 255.).astype(np.float32)
 
         return observation, reward, termination, truncation, info
 
@@ -221,10 +229,8 @@ class DMCGym(Env):
             logging.warn("Currently doing nothing with options={:}".format(options))
         timestep = self._env.reset()
         self.last_observation = timestep.observation
-        observation = _flatten_obs_v2(timestep.observation, self.range_mapping, self.vector_dim)
+        observation = self._observation_function(timestep)
 
-        if self.image_observation_format == '0-1':
-            observation = (observation / 255.).astype(np.float32)
         info = {}
         return observation, info
 
@@ -252,13 +258,20 @@ class DMCGym(Env):
 
 class MinimujoGym(DMCGym):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, observation_type=None, *args, **kwargs):
+        self._observation_type = observation_type
         super().__init__(*args, **kwargs)
         self._task = self._env._task
         
         self.track_position = False
         self.trajectory = []
         self._force_backup_render = False
+
+    def _get_observation_space(self):
+        self._observation_spec = get_observation_spec(self._observation_type)
+        state = self.arena.get_state_observer().get_state(self._env._physics_proxy)
+        obs_space, obs_func = self._observation_spec.build_observation_space(state)
+        return obs_space, lambda timestep: obs_func(self.state)
     
     @property
     def state(self) -> MinimujoState:

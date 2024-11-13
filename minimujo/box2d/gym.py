@@ -7,6 +7,7 @@ import pygame
 from minimujo.box2d.observation import get_full_vector_observation
 from minimujo.color import get_color_idx, get_color_rgba_255
 from minimujo.state.minimujo_state import MinimujoState, MinimujoStateObserver
+from minimujo.state.observation import get_observation_spec
 from minimujo.utils.minigrid import minigrid_tile_generator
 
 try:
@@ -43,8 +44,8 @@ class Box2DEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, minigrid_env: gym.Env, walker_type: str, get_task_function: Callable, xy_scale: float = 1, 
-                 spawn_position=None, spawn_sampler=None,
+    def __init__(self, minigrid_env: gym.Env, walker_type: str, get_task_function: Callable, observation_type=None,
+                 xy_scale: float = 1, spawn_position=None, spawn_sampler=None,
                  seed: int = None, timesteps: int = 500, render_mode='rgb_array', render_width=64, **kwargs) -> None:
         super().__init__()
 
@@ -84,8 +85,9 @@ class Box2DEnv(gym.Env):
         self._skip_initializing = True
         self.world = None
         self._generate_arena()
-        observation = get_full_vector_observation(self._get_state())
-        self.observation_space = gym.spaces.Box(-np.inf, np.inf, shape=observation.shape, dtype=observation.dtype)
+
+        self._observation_spec = get_observation_spec(observation_type)
+        self.observation_space, self._observation_function = self._observation_spec.build_observation_space(self._get_state())
         self.action_space = gym.spaces.Box(-1., 1., (3,), dtype=np.float32)
 
     def _generate_arena(self):
@@ -175,7 +177,7 @@ class Box2DEnv(gym.Env):
         self.timesteps = 0
         self._task = Task(*self.get_task_function(self.minigrid_env))
         self._prev_state = self.state = self._get_state()
-        return get_full_vector_observation(self.state), {}
+        return self._observation_function(self.state), {}
     
     def step(self, action: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         agent_vel = self.agent.linearVelocity.tuple
@@ -193,7 +195,7 @@ class Box2DEnv(gym.Env):
         rew, finished = self._task(self._prev_state, self.state)
 
         self.timesteps += 1
-        return get_full_vector_observation(self.state), rew, finished or self.timesteps >= self.max_timesteps, False, {}
+        return self._observation_function(self.state), rew, finished or self.timesteps >= self.max_timesteps, False, {}
     
     @property
     def task(self):
