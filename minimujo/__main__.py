@@ -50,8 +50,7 @@ def get_gym_env(args):
         observation_type=args.obs_type, 
         xy_scale=args.scale, 
         random_spawn=args.random_spawn, 
-        random_rotation=args.random_rotate, 
-        track_position=args.track, 
+        random_rotation=args.random_rotate,
         timesteps=args.timesteps
     )
 

@@ -11,13 +11,17 @@ from gymnasium.envs.registration import registry
 from minimujo.custom_minigrid import register_custom_minigrid, default_tasks
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.minimujo_task import MinimujoTask
+from minimujo.multitask import register_multitask_minigrid
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 from minimujo.walkers.ant import Ant
 from minimujo.state.tasks import get_grid_goal_task
 
 def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None, environment_kwargs=None):
-    highEnv = gymnasium.make(minigrid_id)
+    if 'minigrid' in environment_kwargs:
+        highEnv = environment_kwargs.pop('minigrid')
+    else:
+        highEnv = gymnasium.make(minigrid_id, disable_env_checker=True)
     highEnv.reset(seed=seed)
 
     environment_kwargs = environment_kwargs or {}
@@ -51,7 +55,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
 
     environment_kwargs['seed'] = seed
 
-    arena = MinimujoArena(highEnv.unwrapped, **environment_kwargs)
+    arena = MinimujoArena(highEnv, **environment_kwargs)
 
     PHYSICS_TIMESTEP=0.005
     CONTROL_TIMESTEP=0.03
@@ -80,7 +84,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     )
     return env
 
-def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='no-arena', image_observation_format='0-255', timesteps=200, seed=None, track_position=False, render_mode='rgb_array', render_width=64, **env_kwargs):
+def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='no-arena', image_observation_format='0-255', timesteps=200, seed=None, render_mode='rgb_array', render_width=64, **env_kwargs):
     if 'box2d' in walker_type.lower():
         return get_box2d_gym_env(task, walker_type, observation_type=observation_type, image_observation_format=image_observation_format, timesteps=timesteps, seed=seed, render_width=render_width, **env_kwargs)
     return MinimujoGym(
@@ -92,13 +96,15 @@ def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='n
         image_observation_format=image_observation_format,
         rendering=None, 
         render_width=render_width,
-        render_mode=render_mode,
-        track_position=track_position)
+        render_mode=render_mode)
 
-def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_function = None, get_task_function = None, **env_kwargs):
+def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_function = None, get_task_function = None, minigrid=None, **env_kwargs):
     from minimujo.box2d.gym import Box2DEnv
-    minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
-    minigrid_env = gymnasium.make(minigrid_id).unwrapped
+    if minigrid is not None:
+        minigrid_env = minigrid
+    else:
+        minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
+        minigrid_env = gymnasium.make(minigrid_id, disable_env_checker=True)
 
     if task_function is not None:
         # the task function is the same every episode
@@ -110,6 +116,7 @@ def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_functio
 SUITE = containers.TaggedTasks()
 
 register_custom_minigrid()
+register_multitask_minigrid()
 minigrid_env_ids = [env_spec.id for env_spec in registry.values() if env_spec.id.startswith("MiniGrid")]
 
 default_task_registry = {**default_tasks}

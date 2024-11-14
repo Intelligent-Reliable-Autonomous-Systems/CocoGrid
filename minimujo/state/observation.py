@@ -118,8 +118,9 @@ class ObservationSpecification:
             
             for key, obs in state.walker.items():
                 dim = len(np.atleast_1d(obs).flatten())
-                this_key = key
-                obs_func = lambda state: state.walker[this_key]
+                if dim == 0:
+                    continue
+                obs_func = lambda state, this_key = key: state.walker[this_key]
                 if self._flatten_walker:
                     flat_map[key] = (flat_idx, flat_idx+dim, obs_func)
                     flat_idx += dim

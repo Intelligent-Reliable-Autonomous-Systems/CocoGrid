@@ -30,7 +30,7 @@ class MinimujoArena(MazeArena):
             control_timestep: timestep at which agent changes action.
         """
 
-        self._minigrid = minigrid.unwrapped
+        self._minigrid = minigrid
         self.cam_width = cam_width
         self.cam_height = cam_height
         self.random_spawn = random_spawn
