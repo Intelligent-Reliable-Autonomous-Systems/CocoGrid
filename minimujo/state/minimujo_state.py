@@ -1,13 +1,23 @@
 import collections
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, ClassVar
 from dm_control.locomotion.walkers import base
 from minigrid.core.world_object import Goal, Lava, Wall
 from minigrid.minigrid_env import MiniGridEnv
+from minimujo.color import get_color_idx
 import numpy as np
 
 @dataclass
 class MinimujoState:
+
+    OBJECT_IDX_TYPE: ClassVar[int] = 0
+    OBJECT_IDX_POS: ClassVar[int] = 1
+    OBJECT_IDX_COLOR: ClassVar[int] = 14
+    OBJECT_IDX_STATE: ClassVar[int] = 15
+
+    @staticmethod
+    def color_to_idx(color):
+        return get_color_idx(color)
 
     def __init__(self, grid: np.ndarray, xy_scale: float, objects: np.ndarray, pose: np.ndarray, walker: Dict[str, np.ndarray]):
         self.grid = grid

@@ -421,7 +421,6 @@ class AStarPlanner(SubgoalPlanner):
                     self._predecessors[neighbor] = cur_state
                     if terminate:
                         self._plan = self._reconstruct_path(neighbor)
-                        print('planned', self._plan, self.cost)
                         return
                     heapq.heappush(self._priority_queue, PrioritizedItem(f_neighbor, (neighbor, g_neighbor)))
                     

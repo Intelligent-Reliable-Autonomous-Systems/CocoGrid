@@ -288,6 +288,11 @@ class MinimujoGym(DMCGym):
         """Get the internal arena object"""
         return self._task._minimujo_arena
     
+    @property
+    def minigrid(self) -> Env:
+        """Get the minigrid environment"""
+        return self._task._minimujo_arena._minigrid
+    
     def render(self, height=None, width=None, camera_id=None):
         height = height or self.render_height
         width = width or self.render_width

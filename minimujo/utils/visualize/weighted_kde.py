@@ -38,7 +38,9 @@ class WeightedKDEHeatmap:
         return kernel / np.sum(kernel)
     
     def add_batch(self, points: np.ndarray, values: np.ndarray) -> None:
-        assert points.shape[0] > 0 and points.shape[0] == values.shape[0]
+        if points.shape[0] == 0:
+            return
+        assert points.shape[0] == values.shape[0], f"Invalid shapes: {points.shape}, {values.shape}"
         points = ((points - self.range_corner) * self.range_scale).astype(int)
 
         if self.decay < 1:

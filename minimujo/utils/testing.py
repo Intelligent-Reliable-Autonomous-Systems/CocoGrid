@@ -45,6 +45,7 @@ def get_pygame_action():
 
 def run_gymnasium_env(env, print_reward=False, print_obs=False):
     import pygame
+    pygame.init()
 
     obs, _ = env.reset()
 
@@ -92,3 +93,35 @@ def run_gymnasium_env(env, print_reward=False, print_obs=False):
             num_steps = 0
             term = trunc = False
             # print(f"Current task: {env.unwrapped.task}")
+
+def capture_video_random_actions(env, video_dir, video_prefix='test_env', override_video_wrapper=False, max_steps=2000):
+    from gymnasium.wrappers.record_video import RecordVideo
+
+    has_record = False
+    while env is not env.unwrapped:
+        if isinstance(env, RecordVideo):
+            if override_video_wrapper:
+                env = env.env
+                break
+            has_record = True
+            break
+        env = env.env
+
+    if not has_record:
+        env = RecordVideo(env, video_folder=video_dir, name_prefix=video_prefix)
+
+    print('Capturing Video with Random Actions')
+    env.reset()
+    print('reset')
+
+    steps = 0
+    done = False
+    while not done:
+        action = env.unwrapped.action_space.sample()
+        obs, rew, term, trunc, info = env.step(action)
+        done = term or trunc
+
+        steps += 1
+        if steps >= max_steps:
+            break
+    env.close()

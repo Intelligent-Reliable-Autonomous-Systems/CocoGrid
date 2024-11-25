@@ -201,6 +201,10 @@ class Box2DEnv(gym.Env):
     def task(self):
         return self._task.description
     
+    @property
+    def minigrid(self):
+        return self.minigrid_env
+    
     def _do_grab(self):
         def square_dist(x1, y1, x2, y2):
             return (x1 - x2)**2 + (y1 - y2)**2

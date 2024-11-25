@@ -42,3 +42,26 @@ def draw_rectangle(
     image[topleft[1]:botright[1], botright[0]-thickness:botright[0]] = color
 
     # image[0:100, 50:150] = color
+
+def draw_plus(
+    image: np.ndarray, 
+    bounds: Tuple[float, float, float, float], 
+    point1: Tuple[float, float], 
+    point2: Tuple[float, float], 
+    color: np.ndarray,
+    thickness: int
+):
+    cam_height, cam_width = image.shape[:2]
+    min_x, min_y, bound_width, bound_height = bounds
+    screen1_x, screen1_y = int((point1[0] - min_x) / bound_width * cam_width), int((1-(point1[1] - min_y) / bound_height) * cam_height)
+    screen2_x, screen2_y = int((point2[0] - min_x) / bound_width * cam_height), int((1 - (point2[1] - min_y) / bound_height) * cam_height)
+    middle_x = (screen1_x + screen2_x) // 2
+    middle_y = (screen1_y + screen2_y) // 2
+    topleft = max(0, min(screen1_x, screen2_x)), max(0, min(screen1_y, screen2_y))
+    botright = min(cam_width-1, max(screen1_x, screen2_x)), min(cam_height-1, max(screen1_y, screen2_y))
+
+    # breakpoint()
+    # draw horizontal through middle
+    image[middle_y:middle_y+thickness, topleft[0]:botright[0]] = color
+    # draw vertical left
+    image[topleft[1]:botright[1], middle_x:middle_x+thickness] = color

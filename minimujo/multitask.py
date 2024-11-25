@@ -24,7 +24,6 @@ class MultiTaskEnv(gym.Wrapper):
 
     def reset(self, *, seed = None, options = None):
         self.env, reset = self._task_distribution.sample_task(seed, options)
-        print(self.env)
         return reset
     
 class MultiTaskBuilder:
@@ -70,5 +69,5 @@ def register_multitask_minigrid():
 
     gym.register(
         id='MiniGrid-MultiGoal-9x9-v0',
-        entry_point=lambda: multi_goal(size=7)
+        entry_point=lambda: multi_goal(size=9)
     )

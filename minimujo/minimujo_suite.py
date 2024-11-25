@@ -21,7 +21,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
     if 'minigrid' in environment_kwargs:
         highEnv = environment_kwargs.pop('minigrid')
     else:
-        highEnv = gymnasium.make(minigrid_id, disable_env_checker=True)
+        highEnv = gymnasium.make(minigrid_id, disable_env_checker=True).env
     highEnv.reset(seed=seed)
 
     environment_kwargs = environment_kwargs or {}
@@ -100,11 +100,12 @@ def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='n
 
 def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_function = None, get_task_function = None, minigrid=None, **env_kwargs):
     from minimujo.box2d.gym import Box2DEnv
+    print('box2d')
     if minigrid is not None:
         minigrid_env = minigrid
     else:
         minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
-        minigrid_env = gymnasium.make(minigrid_id, disable_env_checker=True)
+        minigrid_env = gymnasium.make(minigrid_id, disable_env_checker=True).env
 
     if task_function is not None:
         # the task function is the same every episode
