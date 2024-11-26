@@ -93,7 +93,7 @@ class ObservationSpecification:
             self._arena_size = state.grid.shape
             if self._arena_remove_border:
                 assert self._arena_size[0] > 2 and self._arena_size[1] > 2, f"Cannot remove border from arena of size {self._arena_size}"
-                self._arena_size = self._arena_size[0]-2, self._arena_size[0]-2
+                self._arena_size = self._arena_size[0]-2, self._arena_size[1]-2
 
         self._object_dim: int = ObservationSpecification.OBJECT_POSE_DIM \
             + (len(self._object_type_one_hot) if self._object_type_one_hot is not None else 1) \

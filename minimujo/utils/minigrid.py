@@ -1,6 +1,6 @@
 import labmaze
 from labmaze import defaults as labdefaults
-from minigrid.core.world_object import Wall
+from minigrid.core.world_object import Wall, Lava
 
 def get_labmaze_from_minigrid(minigrid_env):
     WALL_CHAR, EMPTY_CHAR = '*', ' '
@@ -25,3 +25,19 @@ def minigrid_tile_generator(minigrid_env, tile_type=None):
             tile = minigrid_env.grid.get(x, y)
             if tile is not None and tile_type is None or type(tile) == tile_type:
                 yield x, y, tile
+
+def get_door_direction(minigrid_env, door_x, door_y):
+    offsets = [
+        (0, -1), # up
+        (-1, 0), # left
+        (0, 1), # down
+        (1, 0) # right
+    ]
+    grid = minigrid_env.grid
+    for tile_type in [Wall, Lava]: # prioritize orientation based on walls
+        for idx, (x_off, y_off) in enumerate(offsets):
+            x, y = door_x + x_off, door_y + y_off
+            if 0 <= x < grid.width and 0 <= y < grid.height:
+                if type(grid.get(x, y)) is tile_type:
+                    return idx
+    return 0 # default to up

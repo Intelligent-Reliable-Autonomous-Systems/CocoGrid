@@ -1,6 +1,6 @@
 from typing import Any, Callable, Dict, Tuple
 import gymnasium as gym
-from minigrid.core.world_object import Wall, Goal, Lava, Ball, Box, Key
+from minigrid.core.world_object import Wall, Goal, Lava, Ball, Box, Key, Door
 import numpy as np
 import pygame
 
@@ -8,11 +8,11 @@ from minimujo.box2d.observation import get_full_vector_observation
 from minimujo.color import get_color_idx, get_color_rgba_255
 from minimujo.state.minimujo_state import MinimujoState, MinimujoStateObserver
 from minimujo.state.observation import get_observation_spec
-from minimujo.utils.minigrid import minigrid_tile_generator
+from minimujo.utils.minigrid import get_door_direction, minigrid_tile_generator
 
 try:
     import Box2D
-    from Box2D.b2 import (world, polygonShape, circleShape, staticBody, dynamicBody)
+    from Box2D.b2 import (world, polygonShape, circleShape, staticBody, dynamicBody, revoluteJointDef)
 except ImportError as e:
     raise gym.error.DependencyNotInstalled(
         'Box2D is not installed, you can install it by run `pip install swig` followed by `pip install "gymnasium[box2d]"`'
@@ -36,6 +36,7 @@ GRAB_FORCE = 12
 MAX_SPEED = 5
 MAX_GRAB_DISTANCE = 16
 MAX_GRAB_INIT_DISTANCE = 4
+DOOR_UNLOCK_DISTANCE = 1
 K_DERIVATIVE = 0.6
 
 class Box2DEnv(gym.Env):
@@ -111,6 +112,8 @@ class Box2DEnv(gym.Env):
         self.arena_width = self.minigrid_env.grid.width * self.xy_scale
         self.color_mapping = dict()
         self.objects = []
+        self.locks = {}
+        self.door_dirs = {}
         self.grabbed_object_idx = -1
         for x, y, tile in minigrid_tile_generator(self.minigrid_env):
             y = -y
@@ -142,14 +145,88 @@ class Box2DEnv(gym.Env):
                 circle = ball.CreateCircleFixture(radius=0.25, density=1, friction=0.3)
                 ball.linearDamping = BALL_DAMPING
                 self.color_mapping[ball] = get_color_rgba_255(tile.color)
-                self.objects.append((ball, 0, get_color_idx(tile.color)))
+                self.objects.append((ball, 0, get_color_idx(tile.color), 0))
             elif isinstance(tile, Box):
                 box = self.world.CreateDynamicBody(position=center_pos)
                 square = box.CreatePolygonFixture(box=(.25, .25), density=1, friction=0.3)
                 box.linearDamping = BOX_DAMPING
                 box.angularDamping = 1
                 self.color_mapping[box] = get_color_rgba_255(tile.color)
-                self.objects.append((box, 1, get_color_idx(tile.color)))
+                self.objects.append((box, 1, get_color_idx(tile.color), 0))
+            elif isinstance(tile, Key):
+                key = self.world.CreateDynamicBody(position=center_pos)
+
+                unit_size = 1/8
+                bar_width = 1/24
+                rectangles = [
+                    ((0, 0), (unit_size, bar_width)),  # (center position offset, (half-width, half-height))
+                    ((unit_size, unit_size), (bar_width, unit_size)),
+                    ((-unit_size, unit_size), (bar_width, unit_size)),
+                    ((0, 2 * unit_size), (unit_size, bar_width)),
+                    ((0, -1.5 * unit_size), (bar_width, 1.5 * unit_size)), # key stick
+                    ((0.6 * unit_size, -1.3 * unit_size), (0.6 * unit_size, bar_width)),
+                    ((0.6 * unit_size, -2.75 * unit_size), (0.6 * unit_size, bar_width))
+                ]
+
+                # Attach each rectangle as a fixture to the body
+                for center, half_size in rectangles:
+                    shape = polygonShape(box=half_size)  # Create a rectangle shape
+                    fixture = key.CreateFixture(shape=shape, density=1.4, friction=0.3)
+                    fixture.shape.vertices = [(v[0] + center[0], v[1] + center[1]) for v in fixture.shape.vertices]
+
+                key.linearDamping = BOX_DAMPING
+                key.angularDamping = 1
+                self.color_mapping[key] = get_color_rgba_255(tile.color)
+                self.objects.append((key, 3, get_color_idx(tile.color), 0)) 
+            elif isinstance(tile, Door):
+                direction = get_door_direction(self.minigrid_env, x, -y)
+                start_angle = [np.pi, -np.pi / 2, 0, np.pi / 2][direction]
+                density = 1 / self.xy_scale
+                # door = self.world.CreateStaticBody(
+                #     position=center_pos,
+                #     shapes=polygonShape(box=(self.xy_scale/4, self.xy_scale/2)),
+                # )
+                hinge_offset = self.xy_scale * 0.38
+                hinge_base = self.world.CreateStaticBody(
+                    position=(center_pos[0] + hinge_offset * np.sin(-start_angle), 
+                              center_pos[1] + hinge_offset * np.cos(-start_angle))
+                )
+                hinge_base.CreateCircleFixture(radius=0.1*self.xy_scale, density=density, friction=0.3)
+                self.color_mapping[hinge_base] = get_color_rgba_255(tile.color)
+
+                # for fixture in hinge_base.fixtures:
+                #     fixture.sensor = True
+
+                door_length = self.xy_scale * 0.42
+                door = self.world.CreateDynamicBody(position=center_pos)
+                door.CreatePolygonFixture(box=(.1 * self.xy_scale, door_length), density=density, friction=10)
+                door.angularDamping = 20
+                door.angle = start_angle
+
+                rjd = revoluteJointDef(
+                    bodyA=hinge_base,
+                    bodyB=door,
+                    localAnchorA=(0, 0),
+                    localAnchorB=(0, door_length),
+                    enableMotor=False,
+                    enableLimit=True,
+                )
+                rjd.upperAngle = np.pi / 2
+                rjd.lowerAngle = -np.pi / 2
+                hinge_base.joint = self.world.CreateJoint(rjd)
+                self.color_mapping[door] = get_color_rgba_255(tile.color)
+                self.objects.append((door, 2, get_color_idx(tile.color), tile.is_locked * 2 + 1))
+                
+                if tile.is_locked:
+                    lock_offset = 0.2 * self.xy_scale
+                    lock = self.world.CreateStaticBody(
+                        position=(center_pos[0] - lock_offset * np.cos(start_angle), 
+                                  center_pos[1] - lock_offset * np.sin(start_angle)),
+                        shapes=polygonShape(box=(0.05 * self.xy_scale, self.xy_scale * 0.4)),
+                    )
+                    lock.angle = start_angle
+                    self.locks[door] = lock
+                self.door_dirs[door] = start_angle
 
         if self.spawn_position is not None:
             pos = self.spawn_position
@@ -186,8 +263,17 @@ class Box2DEnv(gym.Env):
 
         if action[0] >= 0.5:
             self._do_grab()
-        else:
+        elif self.grabbed_object_idx >= 0:
+            self.objects[self.grabbed_object_idx] = (*self.objects[self.grabbed_object_idx][:3], 0)
             self.grabbed_object_idx = -1
+        for idx, (obj, object_id, color, state) in enumerate(self.objects):
+            if object_id != 2 or state >= 2: # Looking for doors that are unlocked
+                # print('state', state)
+                continue
+            is_closed = int(abs(obj.angle - self.door_dirs[obj]) < np.pi / 4)
+            # print(obj.angle, self.door_dirs[obj], obj.angle - self.door_dirs[obj])
+            if state & 1 != is_closed or True:
+                self.objects[idx] = (*self.objects[idx][:3], is_closed)
         self.world.Step(TIME_STEP, 10, 10)
 
         self._prev_state = self.state
@@ -210,17 +296,29 @@ class Box2DEnv(gym.Env):
             return (x1 - x2)**2 + (y1 - y2)**2
         agent_pos = np.array(self.agent.position.tuple)
         if self.grabbed_object_idx >= 0:
-            grabbed_obj = self.objects[self.grabbed_object_idx][0]
+            (grabbed_obj, grabbed_type, grabbed_color, _) = self.objects[self.grabbed_object_idx]
             obj_pos = grabbed_obj.position.tuple
             if square_dist(*agent_pos, *obj_pos) > MAX_GRAB_DISTANCE:
+                self.objects[self.grabbed_object_idx] = (grabbed_obj, grabbed_type, grabbed_color, 0)
                 self.grabbed_object_idx = -1
+            elif grabbed_type == 3: # a key
+                for idx, (obj, object_id, color, state) in enumerate(self.objects):
+                    if object_id != 2 or state & 2 == 0 or color != grabbed_color: # skip if not a door that matches key color
+                        continue
+                    obj_pos = obj.position.tuple
+                    key_pos = self.objects[self.grabbed_object_idx][0].position.tuple
+                    if square_dist(*key_pos, *obj_pos) < DOOR_UNLOCK_DISTANCE * self.xy_scale:
+                        # unlock
+                        self.objects[idx] = (obj, object_id, color, state & 1)
+                        self.world.DestroyBody(self.locks[obj])
         if self.grabbed_object_idx == -1:
-            for idx, (obj, object_id, _) in enumerate(self.objects):
+            for idx, (obj, object_id, color, state) in enumerate(self.objects):
                 if object_id == 2: # Door
                     continue
                 obj_pos = obj.position.tuple
                 if square_dist(*agent_pos, *obj_pos) < MAX_GRAB_INIT_DISTANCE:
                     self.grabbed_object_idx = idx
+                    self.objects[idx] = (obj, object_id, color, 1)
         if self.grabbed_object_idx >= 0:
             grabbed_obj = self.objects[self.grabbed_object_idx][0]
             walker_facing_vec = self.agent.GetWorldVector((0,1)).tuple
@@ -250,13 +348,17 @@ class Box2DEnv(gym.Env):
         walker_pose[9] = self.agent.angularVelocity
 
         object_array = np.zeros((len(self.objects), 16))
-        for index, (obj, object_id, color_id) in enumerate(self.objects):
+        for index, (obj, object_id, color_id, state) in enumerate(self.objects):
             object_array[index, 0] = object_id
             object_array[index, 1:3] = obj.position.tuple
             object_array[index, 4] = obj.angle
+            if object_id == 2:
+                object_array[index, 5] = self.door_dirs[obj] / np.pi
             object_array[index, 8:10] = obj.linearVelocity.tuple
             object_array[index, 11] = obj.angularVelocity
-            object_array[index, 14:16] = (color_id, index == self.grabbed_object_idx)
+            object_array[index, 14:16] = (color_id, state)
+
+        print('state', [obj[3] for obj in self.objects])
         
         return MinimujoState(self._grid, self.xy_scale, object_array, walker_pose, {})
     

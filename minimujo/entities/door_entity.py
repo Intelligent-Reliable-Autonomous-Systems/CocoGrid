@@ -66,6 +66,8 @@ class DoorEntity(composer.Entity):
 
         self._keys = []
         self._num_activated_steps = 0
+        self.position = np.zeros(3, dtype=float)
+        self.orientation = DOOR_ANGLE[0]
 
     def set_position(self, physics, position, direction):
         self.position = position
