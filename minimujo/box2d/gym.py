@@ -86,13 +86,13 @@ class Box2DEnv(gym.Env):
 
         self._skip_initializing = True
         self.world = None
-        self._generate_arena()
+        self._generate_arena(minigrid_seed=self.minigrid_seed)
 
         self._observation_spec = get_observation_spec(observation_type)
         self.observation_space, self._observation_function = self._observation_spec.build_observation_space(self._get_state())
         self.action_space = gym.spaces.Box(-1., 1., (3,), dtype=np.float32)
 
-    def _generate_arena(self):
+    def _generate_arena(self, minigrid_seed=None, minigrid_options=None):
         if self.world is not None:
             # Explicit memory clean up to prevent memory leaks
             for body in self.world.bodies:
@@ -106,7 +106,7 @@ class Box2DEnv(gym.Env):
             del self.color_mapping
         self.world = world(gravity=(0, 0), doSleep=True)
 
-        self.minigrid_env.reset(seed=self.minigrid_seed)
+        self.minigrid_env.reset(seed=minigrid_seed, options=minigrid_options)
         self._grid = MinimujoStateObserver.get_grid_state_from_minigrid(self.minigrid_env)
         
         self.arena_height = self.minigrid_env.grid.height * self.xy_scale
@@ -246,7 +246,7 @@ class Box2DEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         if not self._skip_initializing:
-            self._generate_arena()
+            self._generate_arena(minigrid_seed=seed or self.minigrid_seed, minigrid_options=options)
         self._skip_initializing = False
         if self._start_state is not None:
             self._set_state(self._start_state)
