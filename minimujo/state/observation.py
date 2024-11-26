@@ -47,6 +47,7 @@ class ObservationSpecification:
         self._num_objects: Optional[int] = num_objects
         # Shuffle each episode
         self._shuffle_objects: bool = shuffle_objects
+        self._object_order = None
 
         self._object_type_one_hot: Optional[np.ndarray] = None
         if object_type_one_hot is True:
@@ -88,6 +89,10 @@ class ObservationSpecification:
 
         if self._num_objects is INFER:
             self._num_objects = len(state.objects)
+        if self._shuffle_objects:
+            self._object_order = np.random.permutation(self._num_objects)
+        else:
+            self._object_order = np.arange(self._num_objects)
 
         if self._arena_size is INFER:
             self._arena_size = state.grid.shape
@@ -99,6 +104,7 @@ class ObservationSpecification:
             + (len(self._object_type_one_hot) if self._object_type_one_hot is not None else 1) \
             + (len(self._object_color_one_hot) if self._object_color_one_hot is not None else 1) \
             + (len(self._object_state_one_hot) if self._object_state_one_hot is not None else 1)
+        
         
         flat_idx = 0
         flat_map = {}
@@ -180,12 +186,21 @@ class ObservationSpecification:
             raise Exception("Observation space is empty")
 
         return self._observation_space, self._observation_function
+    
+    def reset(self, state: MinimujoState):
+        if self._shuffle_objects:
+            self._object_order = np.random.permutation(self._num_objects)
 
     def get_observe_object(self, object_idx):
 
         def observe_object(state: MinimujoState):
-            obj = state.objects[object_idx]
             obs = np.zeros(self._object_dim)
+            if object_idx >= len(self._object_order):
+                return obs
+            o_idx = self._object_order[object_idx]
+            if o_idx >= len(state.objects):
+                return obs
+            obj = state.objects[self._object_order[object_idx]]
             idx = 0
             type = ObservationSpecification.get_maybe_one_hot(obj[0], self._object_type_one_hot)
             obs[idx:idx+len(type)] = type
@@ -242,11 +257,13 @@ OBSERVATION_REGISTRY: Dict[str, ObservationSpecification] = {
     'no-arena': ObservationSpecification(include_arena=False)
 }
 
-def get_observation_spec(observation_type: Optional[Union[str, ObservationSpecification]]) -> ObservationSpecification:
+def get_observation_spec(observation_type: Optional[Union[str, ObservationSpecification, dict]]) -> ObservationSpecification:
     if isinstance(observation_type, str):
         assert observation_type in OBSERVATION_REGISTRY.keys(), f"observation_type {observation_type} not recognized"
         return OBSERVATION_REGISTRY[observation_type]
     elif isinstance(observation_type, ObservationSpecification):
         return observation_type
+    elif isinstance(observation_type, dict):
+        return ObservationSpecification(**observation_type)
     else:
         return ObservationSpecification()

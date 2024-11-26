@@ -33,11 +33,12 @@ BALL_DAMPING = 1
 TIME_STEP = 0.06
 MOVE_FORCE = 12
 GRAB_FORCE = 12
+GRAB_DAMPENING = 5
+GRAB_VEL_ALIGN = 3
 MAX_SPEED = 5
 MAX_GRAB_DISTANCE = 16
 MAX_GRAB_INIT_DISTANCE = 4
 DOOR_UNLOCK_DISTANCE = 1
-K_DERIVATIVE = 0.6
 
 class Box2DEnv(gym.Env):
     metadata = {
@@ -254,6 +255,7 @@ class Box2DEnv(gym.Env):
         self.timesteps = 0
         self._task = Task(*self.get_task_function(self.minigrid_env))
         self._prev_state = self.state = self._get_state()
+        self._observation_spec.reset(self.state)
         return self._observation_function(self.state), {}
     
     def step(self, action: np.ndarray) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
@@ -322,22 +324,27 @@ class Box2DEnv(gym.Env):
         if self.grabbed_object_idx >= 0:
             grabbed_obj = self.objects[self.grabbed_object_idx][0]
             walker_facing_vec = self.agent.GetWorldVector((0,1)).tuple
+
+            # get vectors in cardinal directions relative to facing direction
             target_vecs = np.array((
                 walker_facing_vec,
                 (-walker_facing_vec[1], walker_facing_vec[0]),
                 (-walker_facing_vec[0], -walker_facing_vec[1]),
                 (walker_facing_vec[1], -walker_facing_vec[0]),
             ))
+
+            # get the vector to the grabbed object
             obj_pos = np.array(grabbed_obj.position.tuple)
             actual_diff = obj_pos - agent_pos
+            # get the target vector that most aligns with the object.
             max_idx = np.argmax(np.dot(target_vecs, actual_diff))
             target_vec = target_vecs[max_idx]
 
-            target_pos = np.array(agent_pos) + 1 * target_vec
-            target_diff = (target_pos - obj_pos)
+            target_pos = np.array(agent_pos) + target_vec # the absolute target position
+            target_diff = (target_pos - obj_pos) 
             obj_vel = np.array(grabbed_obj.linearVelocity.tuple)
-            force = GRAB_FORCE * target_diff - 5 * obj_vel
-            
+
+            force = GRAB_FORCE * target_diff - GRAB_DAMPENING * obj_vel + GRAB_VEL_ALIGN * np.array(self.agent.linearVelocity.tuple)            
             grabbed_obj.ApplyForceToCenter(tuple(force.astype(float)), True)
     
     def _get_state(self):
@@ -358,7 +365,7 @@ class Box2DEnv(gym.Env):
             object_array[index, 11] = obj.angularVelocity
             object_array[index, 14:16] = (color_id, state)
 
-        print('state', [obj[3] for obj in self.objects])
+        # print('state', [obj[3] for obj in self.objects])
         
         return MinimujoState(self._grid, self.xy_scale, object_array, walker_pose, {})
     

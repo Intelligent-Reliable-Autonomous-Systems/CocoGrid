@@ -273,6 +273,10 @@ class MinimujoGym(DMCGym):
         obs_space, obs_func = self._observation_spec.build_observation_space(state)
         return obs_space, lambda timestep: obs_func(self.state)
     
+    def reset(self, **kwargs):
+        self._observation_spec.reset(self.state)
+        return super().reset(**kwargs)
+    
     @property
     def state(self) -> MinimujoState:
         """Get the raw Minimujo state representation"""
