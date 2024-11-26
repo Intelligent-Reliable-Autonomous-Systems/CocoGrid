@@ -140,6 +140,7 @@ elif args.gym:
     reward_sum = 0
     num_episodes = 0
     is_holding_reset = False
+    is_eval = False
     while True:
         keys = key.get_pressed()
         if keys[pygame.K_ESCAPE]:
@@ -149,43 +150,17 @@ elif args.gym:
         if keys[pygame.K_r] and not is_holding_reset:
             trunc = True
             is_holding_reset = True
+        elif keys[pygame.K_e] and not is_holding_reset:
+            is_eval = not is_eval
+            trunc = True
+            is_holding_reset = True
+            print(f'Switched to eval={is_eval}')
         else:
-            if not keys[pygame.K_r]:
+            if not keys[pygame.K_r] and not keys[pygame.K_e]:
                 is_holding_reset = False
             action = env.unwrapped.action_space.sample()
             manual_action = get_action()
             action[:3] = manual_action
-
-            # square
-            # def threshold_action(x):
-            #     return np.sign(x) * (abs(x) > 0.1)
-            # pos_idx = env.unwrapped.range_mapping['abs_pos'][0]
-            # if 'goal_pos' in env.unwrapped.range_mapping:
-            #     goal_idx = env.unwrapped.range_mapping['goal_pos'][0]
-            # else:
-            #     goal_idx = env.unwrapped.range_mapping['subgoal_pos'][0]
-            # action[1] = threshold_action(obs[pos_idx+1] - obs[goal_idx+1])
-            # action[2] = -threshold_action(obs[pos_idx] - obs[goal_idx])
-            # action[1] = 1 if obs[pos_idx+1] > obs[goal_idx+1] else -1
-            # action[2] = 1 if obs[pos_idx] < obs[goal_idx] else -1
-            # print(action)
-
-            # def threshold_angle(x):
-            #     if abs(x) < 0.1:
-            #         return 0
-            #     elif abs(x) < 0.5:
-            #         return np.sign(x) * 0.5
-            #     else:
-            #         return np.sign(x) * 0.8
-            # pos = obs[pos_idx:pos_idx+2]
-            # goal = obs[goal_idx:goal_idx+2]
-            # diff = (goal - pos)
-            # target_angle = np.arctan2(diff[1], -diff[0]) / np.pi
-            # actual_angle = obs[5]
-            # if action[0] > 0:
-            #     action[2] = threshold_angle(target_angle - actual_angle)
-            #     action[1] = -0.5
-
 
             obs, rew, term, trunc, info = env.step(action)
             reward_sum += rew
@@ -204,7 +179,7 @@ elif args.gym:
             num_episodes += 1
             if num_episodes >= args.episodes:
                 break
-            env.reset()
+            env.reset(options={'eval': is_eval})
             reward_sum = 0
             num_steps = 0
             term = trunc = False
@@ -213,8 +188,17 @@ elif args.gym:
 
 elif args.minigrid:
     import gymnasium as gym
-    from minigrid.manual_control import ManualControl
+    from minimujo.utils.minigrid import ManualControl
 
+    # "left": Actions.left,
+    # "right": Actions.right,
+    # "up": Actions.forward,
+    # "space": Actions.toggle,
+    # "pageup": Actions.pickup,
+    # "pagedown": Actions.drop,
+    # "tab": Actions.pickup,
+    # "left shift": Actions.drop,
+    # "enter": Actions.done,
     env_id = args.env.replace('Minimujo', 'MiniGrid')
     env = gym.make(
         env_id,

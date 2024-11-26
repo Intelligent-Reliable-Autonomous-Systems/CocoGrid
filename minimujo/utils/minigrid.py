@@ -1,5 +1,7 @@
 import labmaze
 from labmaze import defaults as labdefaults
+import minigrid.manual_control
+from minigrid.core.actions import Actions
 from minigrid.core.world_object import Wall, Lava
 
 def get_labmaze_from_minigrid(minigrid_env):
@@ -41,3 +43,36 @@ def get_door_direction(minigrid_env, door_x, door_y):
                 if type(grid.get(x, y)) is tile_type:
                     return idx
     return 0 # default to up
+
+class ManualControl(minigrid.manual_control.ManualControl):
+
+    def key_handler(self, event):
+        key: str = event.key
+
+        if key == "escape":
+            self.env.close()
+            return
+        if key == "backspace":
+            self.reset()
+            return
+
+        key_to_action = {
+            "left": Actions.left,
+            "right": Actions.right,
+            "up": Actions.forward,
+            "space": Actions.toggle,
+            "pageup": Actions.pickup,
+            "w": Actions.pickup,
+            "pagedown": Actions.drop,
+            "s": Actions.drop,
+            "tab": Actions.pickup,
+            "left shift": Actions.drop,
+            "enter": Actions.done,
+            "d": Actions.done
+        }
+        action = key_to_action.get(key, "NaN")
+        action_name = Actions(action).name if isinstance(action, int) else "no action"
+        print(f'Pressed {key} -> {action_name} ({action})')
+        if key in key_to_action.keys():
+            action = key_to_action[key]
+            self.step(action)
