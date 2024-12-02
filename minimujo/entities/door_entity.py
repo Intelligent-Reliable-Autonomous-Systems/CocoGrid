@@ -4,9 +4,9 @@ from dm_control import composer
 from dm_control import mjcf
 import numpy as np
 
-from minimujo.color import get_color_idx, get_color_rgba
+from minimujo.color import get_color_rgba
+from minimujo.entities import ObjectEnum, get_color_id
 
-DOOR_IDX = 2
 DOOR_QUATS = [
     [1, 0, 0, 0], # up
     [np.sin(np.pi/4), 0, 0, np.sin(np.pi/4)], # left
@@ -22,11 +22,11 @@ class DoorEntity(composer.Entity):
     def _build(self, color=None, is_locked=False, xy_scale=1, z_height=2):
         self.color = color
         rgba = get_color_rgba(color)
-        self._color_idx = get_color_idx(color)
+        self._color_idx = get_color_id(color)
         self._is_locked = is_locked
         self._is_open = False
         self.default_is_locked = is_locked
-        self._object_idx = DOOR_IDX
+        self._object_idx = ObjectEnum.DOOR.value
 
         asset_path = os.path.join(os.path.dirname(__file__), 'assets/door.xml')
         self._mjcf_model = mjcf.from_path(asset_path)

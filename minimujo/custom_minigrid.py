@@ -5,7 +5,7 @@ from minigrid.core.grid import Grid
 from minigrid.core.world_object import Goal, Box, Ball
 import numpy as np
 
-from minimujo.state.tasks import get_random_objects_task
+from minimujo.state.tasks import DEFAULT_TASK_REGISTRY, get_grid_goal_task, get_random_objects_task
 
 class UMazeEnv(MiniGridEnv):
 
@@ -270,25 +270,29 @@ class WarehouseEnv(MiniGridEnv):
         self.put_obj(Goal(), 15, 14)
         self.put_obj(Goal(), 15, 15)
 
-CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv, HallwayChoiceEnv]
+CUSTOM_ENVS = [UMazeEnv, RandomCornerEnv, HallwayChoiceEnv, RandomObjectsEnv]
 
 def register_custom_minigrid():
     register(
         id='MiniGrid-UMaze-v0',
         entry_point='minimujo.custom_minigrid:UMazeEnv'
     )
+    DEFAULT_TASK_REGISTRY[UMazeEnv] = get_grid_goal_task
     register(
         id='MiniGrid-RandomCorner-v0',
         entry_point='minimujo.custom_minigrid:RandomCornerEnv'
     )
+    DEFAULT_TASK_REGISTRY[RandomCornerEnv] = get_grid_goal_task
     register(
         id='MiniGrid-HallwayChoice-v0',
         entry_point='minimujo.custom_minigrid:HallwayChoiceEnv'
     )
+    DEFAULT_TASK_REGISTRY[HallwayChoiceEnv] = get_grid_goal_task
     register(
         id='MiniGrid-Warehouse-v0',
         entry_point='minimujo.custom_minigrid:WarehouseEnv'
     )
+    DEFAULT_TASK_REGISTRY[WarehouseEnv] = get_grid_goal_task
     register(
         id='MiniGrid-RandomObjects-3-v0',
         entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
@@ -296,6 +300,7 @@ def register_custom_minigrid():
             'num_objects': 3
         }
     )
+    DEFAULT_TASK_REGISTRY[RandomObjectsEnv] = get_random_objects_task
     register(
         id='MiniGrid-RandomObject-v0',
         entry_point='minimujo.custom_minigrid:RandomObjectsEnv',

@@ -2,10 +2,9 @@ import os
 
 from dm_control import mjcf
 
-from minimujo.color import get_color_idx, get_color_rgba
+from minimujo.color import get_color_rgba
 from minimujo.entities.grabbable_entity import GrabbableEntity
-
-BALL_IDX = 0
+from minimujo.entities import ObjectEnum, get_color_id
 
 class BallEntity(GrabbableEntity):
     """A ball Entity which can be grabbed."""
@@ -13,8 +12,8 @@ class BallEntity(GrabbableEntity):
 
         self.color = color
         self.rgba = get_color_rgba(color)
-        self._color_idx = get_color_idx(color)
-        self._object_idx = BALL_IDX
+        self._color_idx = get_color_id(color)
+        self._object_idx = ObjectEnum.BALL.value
 
         asset_path = os.path.join(os.path.dirname(__file__), 'assets/ball.xml')
         self.model = mjcf.from_path(asset_path)

@@ -4,8 +4,8 @@ from minigrid.core.world_object import Wall, Goal, Lava, Ball, Box, Key, Door
 import numpy as np
 import pygame
 
-from minimujo.box2d.observation import get_full_vector_observation
-from minimujo.color import get_color_idx, get_color_rgba_255
+from minimujo.color import get_color_rgba_255
+from minimujo.entities import ObjectEnum, get_color_id
 from minimujo.state.minimujo_state import MinimujoState, MinimujoStateObserver
 from minimujo.state.observation import get_observation_spec
 from minimujo.utils.minigrid import get_door_direction, minigrid_tile_generator
@@ -146,14 +146,14 @@ class Box2DEnv(gym.Env):
                 circle = ball.CreateCircleFixture(radius=0.25, density=1, friction=0.3)
                 ball.linearDamping = BALL_DAMPING
                 self.color_mapping[ball] = get_color_rgba_255(tile.color)
-                self.objects.append((ball, 0, get_color_idx(tile.color), 0))
+                self.objects.append((ball, ObjectEnum.BALL.value, get_color_id(tile.color), 0))
             elif isinstance(tile, Box):
                 box = self.world.CreateDynamicBody(position=center_pos)
                 square = box.CreatePolygonFixture(box=(.25, .25), density=1, friction=0.3)
                 box.linearDamping = BOX_DAMPING
                 box.angularDamping = 1
                 self.color_mapping[box] = get_color_rgba_255(tile.color)
-                self.objects.append((box, 1, get_color_idx(tile.color), 0))
+                self.objects.append((box, ObjectEnum.BOX.value, get_color_id(tile.color), 0))
             elif isinstance(tile, Key):
                 key = self.world.CreateDynamicBody(position=center_pos)
 
@@ -178,7 +178,7 @@ class Box2DEnv(gym.Env):
                 key.linearDamping = BOX_DAMPING
                 key.angularDamping = 1
                 self.color_mapping[key] = get_color_rgba_255(tile.color)
-                self.objects.append((key, 3, get_color_idx(tile.color), 0)) 
+                self.objects.append((key, ObjectEnum.KEY.value, get_color_id(tile.color), 0)) 
             elif isinstance(tile, Door):
                 direction = get_door_direction(self.minigrid_env, x, -y)
                 start_angle = [np.pi, -np.pi / 2, 0, np.pi / 2][direction]
@@ -216,7 +216,7 @@ class Box2DEnv(gym.Env):
                 rjd.lowerAngle = -np.pi / 2
                 hinge_base.joint = self.world.CreateJoint(rjd)
                 self.color_mapping[door] = get_color_rgba_255(tile.color)
-                self.objects.append((door, 2, get_color_idx(tile.color), tile.is_locked * 2 + 1))
+                self.objects.append((door, ObjectEnum.DOOR.value, get_color_id(tile.color), tile.is_locked * 2 + 1))
                 
                 if tile.is_locked:
                     lock_offset = 0.2 * self.xy_scale
@@ -269,8 +269,7 @@ class Box2DEnv(gym.Env):
             self.objects[self.grabbed_object_idx] = (*self.objects[self.grabbed_object_idx][:3], 0)
             self.grabbed_object_idx = -1
         for idx, (obj, object_id, color, state) in enumerate(self.objects):
-            if object_id != 2 or state >= 2: # Looking for doors that are unlocked
-                # print('state', state)
+            if object_id != ObjectEnum.DOOR.value or state >= 2: # Looking for doors that are unlocked
                 continue
             is_closed = int(abs(obj.angle - self.door_dirs[obj]) < np.pi / 4)
             # print(obj.angle, self.door_dirs[obj], obj.angle - self.door_dirs[obj])
@@ -305,7 +304,7 @@ class Box2DEnv(gym.Env):
                 self.grabbed_object_idx = -1
             elif grabbed_type == 3: # a key
                 for idx, (obj, object_id, color, state) in enumerate(self.objects):
-                    if object_id != 2 or state & 2 == 0 or color != grabbed_color: # skip if not a door that matches key color
+                    if object_id != ObjectEnum.DOOR.value or state & 2 == 0 or color != grabbed_color: # skip if not a door that matches key color
                         continue
                     obj_pos = obj.position.tuple
                     key_pos = self.objects[self.grabbed_object_idx][0].position.tuple
@@ -315,7 +314,7 @@ class Box2DEnv(gym.Env):
                         self.world.DestroyBody(self.locks[obj])
         if self.grabbed_object_idx == -1:
             for idx, (obj, object_id, color, state) in enumerate(self.objects):
-                if object_id == 2: # Door
+                if object_id == ObjectEnum.DOOR.value: # Door
                     continue
                 obj_pos = obj.position.tuple
                 if square_dist(*agent_pos, *obj_pos) < MAX_GRAB_INIT_DISTANCE:
@@ -359,7 +358,7 @@ class Box2DEnv(gym.Env):
             object_array[index, 0] = object_id
             object_array[index, 1:3] = obj.position.tuple
             object_array[index, 4] = obj.angle
-            if object_id == 2:
+            if object_id == ObjectEnum.DOOR.value:
                 object_array[index, 5] = self.door_dirs[obj] / np.pi
             object_array[index, 8:10] = obj.linearVelocity.tuple
             object_array[index, 11] = obj.angularVelocity

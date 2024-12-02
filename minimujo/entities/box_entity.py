@@ -1,12 +1,10 @@
 import os
 
 from dm_control import mjcf
-import numpy as np
 
-from minimujo.color import get_color_idx, get_color_rgba
+from minimujo.color import get_color_rgba
 from minimujo.entities.grabbable_entity import GrabbableEntity
-
-BOX_ID = 1
+from minimujo.entities import ObjectEnum, get_color_id
 
 class BoxEntity(GrabbableEntity):
     """A box Entity which can be grabbed."""
@@ -14,8 +12,8 @@ class BoxEntity(GrabbableEntity):
 
         self.color = color
         self.rgba = get_color_rgba(color)
-        self._color_idx = get_color_idx(color)
-        self._object_idx = BOX_ID
+        self._color_idx = get_color_id(color)
+        self._object_idx = ObjectEnum.BOX.value
 
         asset_path = os.path.join(os.path.dirname(__file__), 'assets/box.xml')
         self.model = mjcf.from_path(asset_path)

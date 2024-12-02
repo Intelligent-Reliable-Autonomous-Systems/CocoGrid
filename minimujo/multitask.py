@@ -2,6 +2,8 @@ from typing import Callable
 import gymnasium as gym
 import numpy as np
 
+from minimujo.state.tasks import DEFAULT_TASK_REGISTRY, infer_task
+
 class TaskDistribution:
 
     def __init__(self, tasks, weights):
@@ -27,6 +29,7 @@ class TrainEvalDistribution(TaskDistribution):
         return self.train_dist.sample_task(seed, options)
 
 class MultiTaskEnv(gym.Wrapper):
+    """A wrapper to dynamically swap between environments each episode. Be careful using .unwrapped; it will return the currently selected environment."""
 
     def __init__(self, task_distribution: TaskDistribution):
         self._task_distribution = task_distribution
@@ -82,6 +85,8 @@ class MultiTaskBuilder:
         return MultiTaskEnv(self.build())
     
 def register_multitask_minigrid():
+    DEFAULT_TASK_REGISTRY[MultiTaskEnv] = infer_task
+
     def multi_goal(size=7, **kwargs):
         multitask = MultiTaskBuilder() \
             .add_env('MiniGrid-Empty-5x5-v0', size=size) \

@@ -7,21 +7,24 @@ from dm_control.utils import containers
 from minimujo.dmc_gym import MinimujoGym
 import gymnasium
 from gymnasium.envs.registration import registry
+from gymnasium.wrappers.order_enforcing import OrderEnforcing
 
-from minimujo.custom_minigrid import register_custom_minigrid, default_tasks
+from minimujo.custom_minigrid import register_custom_minigrid
 from minimujo.minimujo_arena import MinimujoArena
 from minimujo.minimujo_task import MinimujoTask
 from minimujo.multitask import register_multitask_minigrid
 from minimujo.walkers.square import Square
 from minimujo.walkers.rolling_ball import RollingBallWithHead
 from minimujo.walkers.ant import Ant
-from minimujo.state.tasks import get_grid_goal_task
+from minimujo.state.tasks import DEFAULT_TASK_REGISTRY, get_null_task
 
 def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None, environment_kwargs=None):
     if 'minigrid' in environment_kwargs:
         highEnv = environment_kwargs.pop('minigrid')
     else:
         highEnv = gymnasium.make(minigrid_id, disable_env_checker=True).env
+        if isinstance(highEnv, OrderEnforcing):
+            highEnv = highEnv.env
     highEnv.reset(seed=seed)
 
     environment_kwargs = environment_kwargs or {}
@@ -66,7 +69,7 @@ def get_minimujo_env(minigrid_id, walker_type='square', timesteps=500, seed=None
         task_function = task_kwargs.pop('task_function')
         task_kwargs['get_task_function'] = lambda minigrid: (task_function, '')
     if not 'get_task_function' in task_kwargs:
-        task_kwargs['get_task_function'] = default_task_registry.get(type(highEnv.unwrapped), get_grid_goal_task)
+        task_kwargs['get_task_function'] = DEFAULT_TASK_REGISTRY.get(type(highEnv), get_null_task)
     task = MinimujoTask(
         walker=walker,
         minimujo_arena=arena,
@@ -100,18 +103,19 @@ def get_gym_env_from_suite(domain, task, walker_type='ball', observation_type='n
 
 def get_box2d_gym_env(arena_id, walker_type, observation_type=None, task_function = None, get_task_function = None, minigrid=None, **env_kwargs):
     from minimujo.box2d.gym import Box2DEnv
-    print('box2d')
     if minigrid is not None:
         minigrid_env = minigrid
     else:
         minigrid_id = arena_id.replace('Minimujo', 'MiniGrid')
         minigrid_env = gymnasium.make(minigrid_id, disable_env_checker=True).env
+        if isinstance(minigrid_env, OrderEnforcing):
+            minigrid_env = minigrid_env.env
 
     if task_function is not None:
         # the task function is the same every episode
         get_task_function = lambda minigrid: (task_function, '')
     elif get_task_function is None:
-        get_task_function = default_task_registry.get(type(minigrid_env), get_grid_goal_task)
+        get_task_function = DEFAULT_TASK_REGISTRY.get(type(minigrid_env), get_null_task)
     return Box2DEnv(minigrid_env, walker_type, get_task_function, observation_type=observation_type, **env_kwargs)
 
 SUITE = containers.TaggedTasks()
@@ -119,8 +123,6 @@ SUITE = containers.TaggedTasks()
 register_custom_minigrid()
 register_multitask_minigrid()
 minigrid_env_ids = [env_spec.id for env_spec in registry.values() if env_spec.id.startswith("MiniGrid")]
-
-default_task_registry = {**default_tasks}
 
 for minigrid_id in minigrid_env_ids:
     minimujo_id = minigrid_id.replace("MiniGrid", "Minimujo")
