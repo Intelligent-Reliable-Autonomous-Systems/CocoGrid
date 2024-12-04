@@ -62,7 +62,7 @@ if args.interactive:
 
     ensure_env()
 
-    env = suite.load('minimujo', args.env, task_kwargs={'walker_type': args.walker, 'random': args.seed}, environment_kwargs={'observation_type': args.obs_type, 'xy_scale': args.scale})
+    env = suite.load('minimujo', args.env, task_kwargs={'walker_type': args.walker, 'seed': args.seed}, environment_kwargs={'observation_type': args.obs_type, 'xy_scale': args.scale})
 
     # os.environ['PYOPENGL_PLATFORM'] = 'glfw'
     os.environ['MUJOCO_GL'] = 'glfw'
@@ -204,6 +204,7 @@ elif args.minigrid:
         env_id,
         render_mode="human",
         screen_size=640,
+        highlight=False
     )
 
     manual_control = ManualControl(env)
