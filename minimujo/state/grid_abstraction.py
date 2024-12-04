@@ -71,15 +71,18 @@ class GridAbstraction:
             if new_pos in locked_door_positions:
                 return self
             return GridAbstraction(self.grid, new_pos, self.objects)
-        if action == GridAbstraction.ACTION_GRAB:
+        else:
+            index_to_grab = action - GridAbstraction.ACTION_GRAB
             held_object = self._held_object
             if held_object == -1:
-                object_positions = [(col, row) for id, col, row, _, _ in self.objects if id != GridAbstraction.DOOR_IDX]
-                try:
-                    held_object = object_positions.index(self.walker_pos)
-                except ValueError:
-                    # no object to pick up
+                # not holding anything. 
+                holdable_objects = [idx for idx, (id, col, row, _, _) in self.objects if id != GridAbstraction.DOOR_IDX and (col, row) == self.walker_pos]
+                if index_to_grab >= len(holdable_objects):
                     return self
+                held_object = holdable_objects[index_to_grab]
+            elif index_to_grab > 0:
+                return self
+            
             new_objects = self.objects.copy()
             idx, col, row, color, _ = new_objects[held_object]
             new_objects[held_object] = (idx, col, row, color, int(self._held_object == -1))
@@ -87,6 +90,13 @@ class GridAbstraction:
         
     def get_neighbors(self):
         neighbors = set([self.do_action(action) for action in GridAbstraction.ACTIONS])
+        extra_grab_action = GridAbstraction.ACTION_GRAB + 1
+        next_grab_state = None
+        # multiple objects can be in the same position. so keep doing grab actions until there are no more
+        while next_grab_state is not self:
+            next_grab_state = self.do_action(extra_grab_action)
+            neighbors.add(next_grab_state)
+            extra_grab_action += 1
         if self in neighbors:
             neighbors.remove(self)
         return neighbors

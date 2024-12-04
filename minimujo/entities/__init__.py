@@ -11,8 +11,8 @@ class ObjectEnum(Enum):
     
     @classmethod
     def get_id(cls, obj: Union[str, WorldObj]):
-        if isinstance(obj, WorldObj):
-            obj = str(obj)
+        if not isinstance(obj, str):
+            obj = obj.__name__
         try:
             return cls[obj.upper()].value
         except KeyError:
@@ -25,3 +25,9 @@ def get_color_id(color: str):
         return COLOR_TO_IDX.get(color)
     except ValueError:
         raise ValueError(f"{color} is not an entity color")
+    
+def get_color_name(id: int):
+    try:
+        return next((k for k, v in COLOR_TO_IDX.items() if v == id))
+    except StopIteration:
+        raise ValueError(f"{id} is not a color id")

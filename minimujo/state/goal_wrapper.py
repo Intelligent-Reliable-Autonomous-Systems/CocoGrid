@@ -236,7 +236,11 @@ class DjikstraBackwardsPlanner(SubgoalPlanner):
                     self._predecessors[neighbor] = cur_state
                     heapq.heappush(self._priority_queue, PrioritizedItem(new_distance, neighbor))
         
-        return None  # No path found
+        # No path found
+        self.plan = [self.state]
+        self._distances[self.state] = 100
+        print("Could not find path", self.state, self.goal)
+        return
     
     def _init_djikstra(self) -> None:
         assert self.goal is not None, "Goal has not been set"
