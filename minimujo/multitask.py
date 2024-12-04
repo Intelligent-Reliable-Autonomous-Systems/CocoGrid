@@ -107,6 +107,16 @@ def register_multitask_minigrid():
             .add_env('MiniGrid-SimpleCrossingS9N3-v0', size=size)
         return multitask.build_env()
     
+    def multi_goal_eval_harder(size=7, **kwargs):
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-Empty-5x5-v0', size=size) \
+            .add_env('MiniGrid-RandomCorner-v0', size=size) \
+            .add_env('MiniGrid-HallwayChoice-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N1-v0', size=size) \
+            .add_eval('MiniGrid-SimpleCrossingS9N2-v0', size=size) \
+            .add_eval('MiniGrid-SimpleCrossingS9N3-v0', size=size)
+        return multitask.build_env()
+    
     gym.register(
         id='MiniGrid-MultiGoal-7x7-v0',
         entry_point=lambda: multi_goal(size=7)
@@ -120,4 +130,19 @@ def register_multitask_minigrid():
     gym.register(
         id='MiniGrid-MultiGoal-EvalEasier-7x7-v0',
         entry_point=lambda: multi_goal_eval_easier(size=7)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-EvalEasier-9x9-v0',
+        entry_point=lambda: multi_goal_eval_easier(size=9)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-EvalHarder-7x7-v0',
+        entry_point=lambda: multi_goal_eval_harder(size=7)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-EvalHarder-9x9-v0',
+        entry_point=lambda: multi_goal_eval_harder(size=9)
     )

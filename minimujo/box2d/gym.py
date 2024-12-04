@@ -47,7 +47,7 @@ class Box2DEnv(gym.Env):
     }
 
     def __init__(self, minigrid_env: gym.Env, walker_type: str, get_task_function: Callable, observation_type=None,
-                 xy_scale: float = 1, spawn_position=None, spawn_sampler=None,
+                 xy_scale: float = 1, spawn_position=None, spawn_sampler=None, reset_options=None,
                  seed: int = None, timesteps: int = 500, render_mode='rgb_array', render_width=64, **kwargs) -> None:
         super().__init__()
 
@@ -55,6 +55,7 @@ class Box2DEnv(gym.Env):
         self.walker_type = walker_type
         self.xy_scale = xy_scale
         self.minigrid_seed = seed
+        self._minigrid_options = reset_options or {}
         self.spawn_position = spawn_position
         self.spawn_sampler = spawn_sampler
         self._start_state = None # if set, overrides the reset state
@@ -86,7 +87,7 @@ class Box2DEnv(gym.Env):
 
         self._skip_initializing = True
         self.world = None
-        self._generate_arena(minigrid_seed=self.minigrid_seed)
+        self._generate_arena(minigrid_seed=self.minigrid_seed, minigrid_options=self._minigrid_options)
 
         self._observation_spec = get_observation_spec(observation_type)
         self.observation_space, self._observation_function = self._observation_spec.build_observation_space(self._get_state())
@@ -246,7 +247,7 @@ class Box2DEnv(gym.Env):
 
     def reset(self, seed=None, options=None):
         if not self._skip_initializing:
-            self._generate_arena(minigrid_seed=seed or self.minigrid_seed, minigrid_options=options)
+            self._generate_arena(minigrid_seed=seed or self.minigrid_seed, minigrid_options={**self._minigrid_options, **(options or {})})
         self._skip_initializing = False
         if self._start_state is not None:
             self._set_state(self._start_state)

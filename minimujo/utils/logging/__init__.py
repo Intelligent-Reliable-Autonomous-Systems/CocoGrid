@@ -131,6 +131,7 @@ class LoggingWrapper(gym.Wrapper):
         self.has_logged_episode = True
         self.raise_errors = raise_errors
         self.is_eval = is_eval
+        self._do_logging = True
 
         if standard_label is not None:
             standard_logger = StandardLogger(standard_label)
@@ -141,7 +142,7 @@ class LoggingWrapper(gym.Wrapper):
         metric.register(env=self.env, summary_writer=self.summary_writer, max_timesteps=self.max_timesteps, global_step_callback=self.global_step_callback, is_eval=self.is_eval)
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Any, Dict[str, Any]]:
-        if not LoggingWrapper.do_logging:
+        if not LoggingWrapper.do_logging or not self._do_logging:
             return super().reset(seed=seed, options=options)
         
         if not self.has_logged_episode:
@@ -167,7 +168,7 @@ class LoggingWrapper(gym.Wrapper):
 
     def step(self, action: Any) -> Tuple[Any, float, bool, bool, Dict[str, Any]]:
         obs, rew, term, trunc, info = super().step(action)
-        if not LoggingWrapper.do_logging:
+        if not LoggingWrapper.do_logging or not self._do_logging:
             return obs, rew, term, trunc, info
 
         for metric in self.metrics:
@@ -195,7 +196,17 @@ class LoggingWrapper(gym.Wrapper):
     def __getattr__(self, name: str) -> Any:
         if name == "subscribe_metric":
             return self.subscribe_metric
+        if name == "disable_logging":
+            return self.disable_logging
+        if name == "enable_logging":
+            return self.enable_logging
         return getattr(super(), name)
+    
+    def disable_logging(self):
+        self._do_logging = False
+
+    def enable_logging(self):
+        self._do_logging = True
     
 class StandardLogger(LoggingMetric):
 
