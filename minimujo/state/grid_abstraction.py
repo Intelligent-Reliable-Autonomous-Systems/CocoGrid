@@ -9,6 +9,7 @@ from typing import List, Tuple
 import gymnasium as gym
 import numpy as np
 from minimujo.color import COLOR_MAP, get_color_idx
+from minimujo.entities import ObjectEnum
 from minimujo.state.goal_wrapper import DeterministicValueIterationPlanner, DjikstraBackwardsPlanner, GoalObserver, GoalWrapper
 from minimujo.state.minimujo_state import MinimujoState
 
@@ -20,7 +21,8 @@ class GridAbstraction:
     ACTION_GRAB = 4
     ACTIONS = [ACTION_UP, ACTION_LEFT, ACTION_DOWN, ACTION_RIGHT, ACTION_GRAB]
     OBJECT_IDS = ['ball', 'box', 'door', 'key']
-    DOOR_IDX = 2
+    DOOR_IDX = ObjectEnum.DOOR.value
+    KEY_IDX = ObjectEnum.KEY.value
     GRID_EMPTY = 0
     GRID_WALL = 1
     GRID_GOAL = 2
@@ -61,32 +63,48 @@ class GridAbstraction:
         return f'Grid[{self.walker_pos}; {obj_str}]'
     
     def do_action(self, action: int) -> GridAbstraction:
+        new_objects = self.objects.copy()
+        held_object = self._held_object
+        new_pos = self.walker_pos
+
         if action < GridAbstraction.ACTION_GRAB:
             offsets = [(0,-1),(-1,0),(0,1),(1,0)]
             off_x, off_y = offsets[action]
             new_pos = self.walker_pos[0] + off_x, self.walker_pos[1] + off_y
             if self.grid[new_pos] == GridAbstraction.GRID_WALL:
                 return self
-            locked_door_positions = [(col, row) for _, col, row, _, state in self._doors if state > 0]
-            if new_pos in locked_door_positions:
-                return self
-            return GridAbstraction(self.grid, new_pos, self.objects)
+            
+            for idx, (type, col, row, color, state) in enumerate(self.objects):
+                if type != GridAbstraction.DOOR_IDX:
+                    continue
+                if (col, row) == new_pos: # agent is at door
+                    # breakpoint()
+                    if state > 1: # is locked
+                        if self._held_object == -1:
+                            return self
+                        else:
+                            held_type, _, _, held_color, _ = self.objects[self._held_object]
+                            if held_type != GridAbstraction.KEY_IDX or color != held_color: # cannot unlock
+                                return self
+                    new_objects[idx] = (type, col, row, color, 0) # open door
         else:
             index_to_grab = action - GridAbstraction.ACTION_GRAB
-            held_object = self._held_object
             if held_object == -1:
                 # not holding anything. 
-                holdable_objects = [idx for idx, (id, col, row, _, _) in self.objects if id != GridAbstraction.DOOR_IDX and (col, row) == self.walker_pos]
+                holdable_objects = [idx for idx, (id, col, row, _, _) in enumerate(self.objects) if id != GridAbstraction.DOOR_IDX and (col, row) == self.walker_pos]
                 if index_to_grab >= len(holdable_objects):
                     return self
                 held_object = holdable_objects[index_to_grab]
             elif index_to_grab > 0:
                 return self
-            
-            new_objects = self.objects.copy()
+            else:
+                new_objects[held_object] = (*new_objects[held_object][:4], 0)
+                held_object = -1 # let go of the object
+        
+        if held_object != -1:
             idx, col, row, color, _ = new_objects[held_object]
-            new_objects[held_object] = (idx, col, row, color, int(self._held_object == -1))
-            return GridAbstraction(self.grid, self.walker_pos, new_objects)
+            new_objects[held_object] = (idx, *new_pos, color, 1)
+        return GridAbstraction(self.grid, new_pos, new_objects)
         
     def get_neighbors(self):
         neighbors = set([self.do_action(action) for action in GridAbstraction.ACTIONS])
@@ -137,6 +155,26 @@ class GridAbstraction:
 
         objects = [obj_to_grid(obj) for obj in minimujo_state.objects]
         walker_pos = GridAbstraction.continuous_position_to_grid(minimujo_state.pose[:3], minimujo_state.xy_scale)
+        for obj, abstract in zip(minimujo_state.objects, objects):
+            if abstract[0] == GridAbstraction.DOOR_IDX and abstract[4] > 0:
+                if abstract[1:3] == walker_pos:
+                    # if the agent is in the same spot as a closed door, move them out of that square
+                    pos_diff = np.sign(minimujo_state.pose[:2] - obj[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2]).astype(int)
+                    pos_diff[1] *= -1
+                    door_dir = obj[MinimujoState.OBJECT_IDX_DOOR_ORIENTATION] * np.pi
+                    # either mask out the x or y offset
+                    pos_offset = pos_diff * ((1,0) if abs(np.cos(door_dir)) > abs(np.sin(door_dir)) else (0,1))
+                    walker_pos = (walker_pos[0] + pos_offset[0], walker_pos[1] + pos_offset[1])
+                for idx, (other_obj, other_abstract) in enumerate(zip(minimujo_state.objects, objects)):
+                    if other_abstract[0] != GridAbstraction.DOOR_IDX and abstract[1:3] == other_abstract[1:3]:
+                        # other object should be pushed out of door
+                        pos_diff = np.sign(other_obj[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] \
+                                            - obj[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2]).astype(int)
+                        pos_diff[1] *= -1
+                        door_dir = obj[MinimujoState.OBJECT_IDX_DOOR_ORIENTATION] * np.pi
+                        # either mask out the x or y offset
+                        new_pos = pos_diff * ((1,0) if abs(np.cos(door_dir)) > abs(np.sin(door_dir)) else (0,1)) + other_abstract[1:3]
+                        objects[idx] = (other_abstract[0], *new_pos, *other_abstract[3:5])
         
         return GridAbstraction(minimujo_state.grid, walker_pos, objects)
 

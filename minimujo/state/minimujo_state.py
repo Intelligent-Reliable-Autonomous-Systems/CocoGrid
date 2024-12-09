@@ -12,6 +12,7 @@ class MinimujoState:
 
     OBJECT_IDX_TYPE: ClassVar[int] = 0
     OBJECT_IDX_POS: ClassVar[int] = 1
+    OBJECT_IDX_DOOR_ORIENTATION: ClassVar[int] = 5
     OBJECT_IDX_VEL: ClassVar[int] = 8
     OBJECT_IDX_COLOR: ClassVar[int] = 14
     OBJECT_IDX_STATE: ClassVar[int] = 15

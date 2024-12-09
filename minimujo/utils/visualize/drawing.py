@@ -12,7 +12,8 @@ def get_camera_bounds(env: gym.Env, norm_scale: bool = False) -> Tuple[float,flo
         return 0, -unwrapped_env.arena.maze_height / scale, unwrapped_env.arena.maze_width / scale, unwrapped_env.arena.maze_height / scale
     if isinstance(unwrapped_env, Box2DEnv):
         scale = unwrapped_env.xy_scale if norm_scale else 1
-        return 0, -unwrapped_env.arena_height / scale, unwrapped_env.arena_width / scale, unwrapped_env.arena_height / scale
+        max_dim = max(unwrapped_env.arena_width, unwrapped_env.arena_height) / scale
+        return 0, -max_dim, max_dim, max_dim
     else:
         raise Exception(f"To get camera bounds, env must be a MinimujoGym or Box2DEnv. Actual type: {type(unwrapped_env)}")
 

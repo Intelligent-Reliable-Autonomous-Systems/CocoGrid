@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass, field
 import heapq
-from typing import Any, Callable, Collection, Dict, Hashable, Sequence, SupportsFloat, Tuple, TypeVar, Union
+from typing import Any, Callable, Collection, Dict, Hashable, Iterable, Sequence, SupportsFloat, Tuple, TypeVar, Union
 
 import gymnasium as gym
 import numpy as np
@@ -18,15 +18,13 @@ class GoalWrapper(gym.Wrapper):
     def __init__(
         self, 
         env: gym.Env, 
-        abstraction: Callable[[Observation, gym.Env], AbstractState], 
-        task_getter: Callable[[Observation, AbstractState, gym.Env], Task],
+        abstraction: Callable[[Observation, gym.Env], AbstractState],
         planner: SubgoalPlanner,
         observer: GoalObserver,
         use_base_reward: bool = True
     ) -> None:
         super().__init__(env)
         
-        self._task_getter = task_getter
         self._abstraction = abstraction
         self._planner = planner
         self._observer = observer
@@ -39,8 +37,7 @@ class GoalWrapper(gym.Wrapper):
         obs, info = super().reset(*args, **kwargs)
 
         abstract_state = self._abstraction(obs, self.env)
-        task = self._task_getter(obs, abstract_state, self.env)
-        self._planner.set_task(task)
+        self._planner.init_task(obs, abstract_state, self.env)
         self._planner.update_state(abstract_state)
         self._planner.update_plan()
         
@@ -54,8 +51,15 @@ class GoalWrapper(gym.Wrapper):
         prev_abstract_state = self.abstract_state
         prev_subgoal = self.subgoal
         prev_cost = self._planner.cost
-
         abstract_state = self._abstraction(obs, self.env)
+
+        is_new_goal = prev_abstract_state != abstract_state
+        goal_achieved = abstract_state == self.subgoal
+        # if is_new_goal and not goal_achieved:
+        #     task = self._task_getter(obs, abstract_state, self.env)
+        #     if task != self._planner.goal:
+        #         self._planner.set_task(task)
+
         self._planner.update_state(abstract_state)
         self._planner.update_plan()
 
@@ -65,8 +69,8 @@ class GoalWrapper(gym.Wrapper):
         rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost)
 
         info['goal'] = self.subgoal
-        info['goal_achieved'] = abstract_state == prev_subgoal
-        info['is_new_goal'] = prev_subgoal != self.subgoal
+        info['goal_achieved'] = goal_achieved
+        info['is_new_goal'] = is_new_goal
         info['num_subgoals'] = self._planner.cost
         info['frac_subgoals'] = self._planner.cost / self._initial_plan_cost if self._initial_plan_cost != 0 else 0
         
@@ -109,19 +113,23 @@ class GoalObserver:
 class SubgoalPlanner(ABC):
 
     def __init__(self):
-        # Both set_goal and update_state must be initialized before planning
+        self._task_initialized: bool = False
+        # Both update_task and update_state must be initialized before planning
         self._current_state: AbstractState = None
-        self._task: Callable[[AbstractState], Tuple[float, bool]] = None
+        # self._task: Callable[[AbstractState], Tuple[float, bool]] = None
         self._goal_state: AbstractState = None
 
-    def set_task(self, task: Task) -> None:
-        """Sets the target final task, which can either be a goal state or a function that evaluates a state"""
-        if not callable(task):
-            self._goal_state = task
-            self._task = lambda abstract: (int(abstract == task), abstract == task)
-        else:
-            self._goal_state = None
-            self._task = task
+    # def set_task(self, task: Task) -> None:
+    #     """Sets the target final task, which can either be a goal state or a function that evaluates a state"""
+    #     if not callable(task):
+    #         self._goal_state = task
+    #         self._task = lambda abstract: (int(abstract == task), abstract == task)
+    #     else:
+    #         self._goal_state = None
+    #         self._task = task
+
+    def init_task(self, obs: Observation, abstract: AbstractState, env: gym.Env):
+        self._task_initialized = True
 
     def update_state(self, state: AbstractState) -> None:
         """Updates the currently achieved subgoal"""
@@ -130,9 +138,6 @@ class SubgoalPlanner(ABC):
     @property
     def goal(self) -> AbstractState:
         """Gets the target final goal"""
-        if self._goal_state is not None:
-            return self._goal_state
-        # if goal was not specified, refer to the plan
         return self.plan[-1]
     
     @property
@@ -220,9 +225,10 @@ class DjikstraBackwardsPlanner(SubgoalPlanner):
             # Mark the state as visited
             self._visited.add(cur_state)
 
-            # If we've reached the current state, return the distance
+            # If we've reached the start state, construct the path
             if cur_state == self.state:
                 self._plan = self._reconstruct_path(cur_state)
+                return
 
             # Explore neighbors of the current state
             for neighbor, cost in self._neighbors_fn(cur_state):
@@ -237,7 +243,7 @@ class DjikstraBackwardsPlanner(SubgoalPlanner):
                     heapq.heappush(self._priority_queue, PrioritizedItem(new_distance, neighbor))
         
         # No path found
-        self.plan = [self.state]
+        self._plan = [self.state]
         self._distances[self.state] = 100
         print("Could not find path", self.state, self.goal)
         return
@@ -360,19 +366,18 @@ class AStarPlanner(SubgoalPlanner):
 
     def __init__(
         self,
-        actions: Collection[Action],
-        transition_function: Callable[[AbstractState, Action], AbstractState],
+        task_getter: Callable[[Observation, AbstractState, gym.Env], Callable[[AbstractState], Iterable[Tuple[AbstractState, float, bool]]]],
         heuristic_function: Callable[[AbstractState], float] = None
     ):
-        self.actions = actions
-        self.transition_function = transition_function
+        self.task_getter = task_getter
         self.heuristic_function = heuristic_function or (lambda abstract: 0)
         self._is_initialized = False
+        self._plan_failure_count = 0
 
-    def set_task(self, task: Task) -> None:
-        """Sets the target final task"""
+    def init_task(self, obs: Observation, abstract: AbstractState, env: gym.Env):
+        self._task_initialized = True
         self._is_initialized = False
-        super().set_task(task)
+        self.get_edges = self.task_getter(obs, abstract, env)
         
     @property
     def plan(self) -> Sequence[AbstractState]:
@@ -384,7 +389,7 @@ class AStarPlanner(SubgoalPlanner):
     def cost(self) -> float:
         """Gets the cost of the computed plan"""
         assert self._plan is not None, "Plan has not been computed. Call update_plan before referencing plan cost"
-        return self._costs[self.goal]
+        return self._costs[self._plan[-1]] - self._costs[self._plan[0]]
     
     def update_plan(self):
         # Use Djisktra
@@ -407,29 +412,29 @@ class AStarPlanner(SubgoalPlanner):
             self._visited.add(cur_state)
 
             # Explore neighbors of the current state
-            for action in self.actions:
-                neighbor = self.transition_function(cur_state, action)
+            for neighbor, cost, goal_reached in self.get_edges(cur_state):
                 if neighbor in self._visited:
                     continue
-                
-                edge_reward, terminate = self._task(neighbor)
 
                 # g score is the real cost from start to neighbor
                 # task costs are negative, so negate it to make costs positive (i.e. lower score is better)
-                g_neighbor = g_current - edge_reward 
+                g_neighbor = g_current + cost
                 # f score is heuristic cost
                 f_neighbor = g_neighbor - self.heuristic_function(cur_state)
                 # If a shorter path to the neighbor is found
                 if neighbor not in self._costs or g_neighbor < self._costs[neighbor]:
                     self._costs[neighbor] = g_neighbor
                     self._predecessors[neighbor] = cur_state
-                    if terminate:
+                    if goal_reached:
                         self._plan = self._reconstruct_path(neighbor)
                         return
                     heapq.heappush(self._priority_queue, PrioritizedItem(f_neighbor, (neighbor, g_neighbor)))
                     
-        breakpoint()
-        print('failed to plan')
+        self._plan_failure_count += 1
+        print('failed to plan', self.state)
+        self._plan = [self.state]
+        if self._plan_failure_count > 20:
+            raise Exception("AStarPlanner failed to plan too many times")
         
     def _init_djikstra(self) -> None:
         assert self.state is not None, "Current subgoal has not been set"
