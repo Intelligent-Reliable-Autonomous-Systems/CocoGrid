@@ -21,7 +21,8 @@ class GoalWrapper(gym.Wrapper):
         abstraction: Callable[[Observation, gym.Env], AbstractState],
         planner: SubgoalPlanner,
         observer: GoalObserver,
-        use_base_reward: bool = True
+        use_base_reward: bool = True,
+        clip_reward: int = 1000
     ) -> None:
         super().__init__(env)
         
@@ -29,6 +30,7 @@ class GoalWrapper(gym.Wrapper):
         self._planner = planner
         self._observer = observer
         self._use_base_reward = use_base_reward
+        self._clip_reward = clip_reward
 
         base_obs_space = self.env.unwrapped.observation_space
         self.observation_space = observer.transform_observation_space(base_obs_space)
@@ -67,6 +69,7 @@ class GoalWrapper(gym.Wrapper):
         if not self._use_base_reward:
             rew = 0
         rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost)
+        rew = max(-self._clip_reward, min(rew, self._clip_reward)) # ensure reward doesn't spike (e.g. if plan cost is infinity)
 
         info['goal'] = self.subgoal
         info['goal_achieved'] = goal_achieved
@@ -433,8 +436,8 @@ class AStarPlanner(SubgoalPlanner):
         self._plan_failure_count += 1
         print('failed to plan', self.state)
         self._plan = [self.state]
-        if self._plan_failure_count > 20:
-            raise Exception("AStarPlanner failed to plan too many times")
+        # if self._plan_failure_count > 20:
+        #     raise Exception("AStarPlanner failed to plan too many times")
         
     def _init_djikstra(self) -> None:
         assert self.state is not None, "Current subgoal has not been set"

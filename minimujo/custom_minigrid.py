@@ -6,6 +6,7 @@ from minigrid.core.world_object import Goal, Box, Ball
 import numpy as np
 
 from minimujo.state.tasks import DEFAULT_TASK_REGISTRY, get_grid_goal_task, get_random_objects_task
+from minimujo.minigrid.doorkeycrossing import DoorKeyCrossingEnv
 
 class UMazeEnv(MiniGridEnv):
 
@@ -306,6 +307,33 @@ def register_custom_minigrid():
         entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
         kwargs={
             'num_objects': 1
+        }
+    )
+
+    DEFAULT_TASK_REGISTRY[DoorKeyCrossingEnv] = get_grid_goal_task
+    register(
+        id='MiniGrid-DoorKeyCrossingS9N3-v0',
+        entry_point='minimujo.minigrid.doorkeycrossing:DoorKeyCrossingEnv',
+        kwargs={
+            'size': 9,
+            'num_crossings': 3,
+            'obstacle_type': DoorKeyCrossingEnv.WALL_TYPE
+        }
+    )
+
+    register(
+        id='MiniGrid-DoorKey-10x10-v0',
+        entry_point='minigrid.envs.doorkey:DoorKeyEnv',
+        kwargs={
+            'size': 10
+        }
+    )
+
+    register(
+        id='MiniGrid-DoorKey-12x12-v0',
+        entry_point='minigrid.envs.doorkey:DoorKeyEnv',
+        kwargs={
+            'size': 12
         }
     )
 

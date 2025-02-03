@@ -145,7 +145,7 @@ class GridAbstraction:
         return (wx - tx)**2 + (wy - ty)**2
     
     @staticmethod
-    def from_minimujo_state(minimujo_state: MinimujoState):
+    def from_minimujo_state(minimujo_state: MinimujoState, force_door_evict=False):
         def obj_to_grid(object_state: np.ndarray):
             id = object_state[0]
             col, row = GridAbstraction.continuous_position_to_grid(object_state[1:4], minimujo_state.xy_scale)
@@ -156,7 +156,7 @@ class GridAbstraction:
         objects = [obj_to_grid(obj) for obj in minimujo_state.objects]
         walker_pos = GridAbstraction.continuous_position_to_grid(minimujo_state.pose[:3], minimujo_state.xy_scale)
         for obj, abstract in zip(minimujo_state.objects, objects):
-            if abstract[0] == GridAbstraction.DOOR_IDX and abstract[4] > 0:
+            if abstract[0] == GridAbstraction.DOOR_IDX and (abstract[4] > 0 or force_door_evict):
                 if abstract[1:3] == walker_pos:
                     # if the agent is in the same spot as a closed door, move them out of that square
                     pos_diff = np.sign(minimujo_state.pose[:2] - obj[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2]).astype(int)

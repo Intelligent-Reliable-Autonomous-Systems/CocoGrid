@@ -21,7 +21,8 @@ from minimujo.utils.minigrid import get_labmaze_from_minigrid
 
 class MinimujoArena(MazeArena):
     def __init__(self, minigrid, xy_scale=1, z_height=2.0, cam_width=320, cam_height=240,
-            random_spawn=False, spawn_padding=0.3, spawn_position=None, spawn_sampler=None, use_subgoal_rewards=False, dense_rewards=False, seed=None):
+            random_spawn=False, spawn_padding=0.3, spawn_position=None, spawn_sampler=None, 
+            reset_options=None, use_subgoal_rewards=False, dense_rewards=False, seed=None):
         """Initializes goal-directed minigrid task.
             Args:
             walker: The body to navigate the maze.
@@ -38,6 +39,7 @@ class MinimujoArena(MazeArena):
         self.spawn_position = spawn_position
         self.spawn_sampler = spawn_sampler
         self._minigrid_seed = seed
+        self._minigrid_options = {} or reset_options
 
         labmaze = get_labmaze_from_minigrid(self._minigrid)
         
@@ -148,7 +150,7 @@ class MinimujoArena(MazeArena):
 
     def initialize_arena_mjcf(self, random_state=None):
         if not self._already_initialized:
-            self._minigrid.reset(seed=self._minigrid_seed)
+            self._minigrid.reset(seed=self._minigrid_seed, options=self._minigrid_options)
         self._maze = get_labmaze_from_minigrid(self._minigrid)
         self.regenerate()
         

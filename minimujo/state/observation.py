@@ -4,6 +4,7 @@ import gymnasium as gym
 import numpy as np
 
 from minimujo.state.minimujo_state import MinimujoState
+from minimujo.entities import COLOR_TO_IDX
 
 # Indicates that a value should be inferred during the first reset()
 # Can cause problems if the the number of objects, etc changes
@@ -58,8 +59,7 @@ class ObservationSpecification:
 
         self._object_color_one_hot: Optional[np.ndarray] = None
         if object_color_one_hot is True:
-            # there are 4 object types: ball, box, door, key
-            self._object_color_one_hot = np.arange(4)
+            self._object_color_one_hot = np.arange(len(COLOR_TO_IDX))
         elif isinstance(object_color_one_hot, Sequence):
             self._object_color_one_hot = np.asarray(object_color_one_hot)
 
@@ -240,7 +240,17 @@ class ObservationSpecification:
             for (low_idx, high_idx, obs_func) in flat_map.values():
                 obs[low_idx:high_idx] = obs_func(state)
             return obs
-        return observe_flat            
+        return observe_flat
+    
+    def get_feature_from_observation(self, obs, feature):
+        if isinstance(obs, dict):
+            if feature in obs:
+                return obs[feature]
+            obs = obs.get(ObservationSpecification.FEATURES_KEY, None)
+        if obs is None or (feature not in self._flat_map):
+            raise Exception(f"Observation does not contain feature {feature}")
+        idx_a, idx_b, _ = self._flat_map[feature]
+        return obs[idx_a:idx_b]
 
     @staticmethod
     def get_maybe_one_hot(value: Union[int, np.ndarray], one_hot_indices: Optional[np.ndarray]) -> np.ndarray:
@@ -254,7 +264,9 @@ class ObservationSpecification:
     
 OBSERVATION_REGISTRY: Dict[str, ObservationSpecification] = {
     'full': ObservationSpecification(),
-    'no-arena': ObservationSpecification(include_arena=False)
+    'no-arena': ObservationSpecification(include_arena=False),
+    'object-one-hot': ObservationSpecification(object_type_one_hot=True, object_color_one_hot=True, object_state_one_hot=4),
+    'full-2obj': ObservationSpecification(num_objects=2),
 }
 
 def get_observation_spec(observation_type: Optional[Union[str, ObservationSpecification, dict]]) -> ObservationSpecification:

@@ -117,6 +117,24 @@ def register_multitask_minigrid():
             .add_eval('MiniGrid-SimpleCrossingS9N3-v0', size=size)
         return multitask.build_env()
     
+    def multi_goal_eval_hard1(size=7, **kwargs):
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-Empty-5x5-v0', size=size) \
+            .add_env('MiniGrid-RandomCorner-v0', size=size) \
+            .add_env('MiniGrid-HallwayChoice-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N1-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N2-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N3-v0', size=size) \
+            .add_eval('MiniGrid-SimpleCrossingS9N2-v0', size=size) \
+            .add_eval('MiniGrid-SimpleCrossingS9N3-v0', size=size)
+        return multitask.build_env()
+    
+    def multi_goal_eval_hard2(size=7, **kwargs):
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-SimpleCrossingS9N2-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N3-v0', size=size)
+        return multitask.build_env()
+    
     gym.register(
         id='MiniGrid-MultiGoal-7x7-v0',
         entry_point=lambda: multi_goal(size=7)
@@ -143,6 +161,44 @@ def register_multitask_minigrid():
     )
 
     gym.register(
+        id='MiniGrid-MultiGoal-TrainAll-EvalHard-7x7-v0',
+        entry_point=lambda: multi_goal_eval_hard1(size=7)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-TrainHard-EvalHard-7x7-v0',
+        entry_point=lambda: multi_goal_eval_hard2(size=7)
+    )
+
+    gym.register(
         id='MiniGrid-MultiGoal-EvalHarder-9x9-v0',
         entry_point=lambda: multi_goal_eval_harder(size=9)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-TrainAll-EvalHard-9x9-v0',
+        entry_point=lambda: multi_goal_eval_hard1(size=9)
+    )
+
+    gym.register(
+        id='MiniGrid-MultiGoal-TrainHard-EvalHard-9x9-v0',
+        entry_point=lambda: multi_goal_eval_hard2(size=9)
+    )
+
+    def doorkey_crossing_generalization(size=9, num_crossings=1, obstacle_type=None, **kwargs):
+        crossing_args = {
+            'size': size,
+            'num_crossings': num_crossings,
+        }
+        if obstacle_type is not None:
+            crossing_args['obstacle_type'] = obstacle_type
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-DoorKey-6x6-v0', size=size) \
+            .add_env('MiniGrid-SimpleCrossingS9N2-v0', **crossing_args) \
+            .add_eval('MiniGrid-DoorKeyCrossingS9N3-v0', **crossing_args)
+        return multitask.build_env()
+
+    gym.register(
+        id='MiniGrid-DoorKeyCrossingGeneralizationS9N3-v0',
+        entry_point=lambda: doorkey_crossing_generalization(size=9, num_crossings=3)
     )
