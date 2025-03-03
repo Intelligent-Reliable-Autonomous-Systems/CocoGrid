@@ -202,3 +202,44 @@ def register_multitask_minigrid():
         id='MiniGrid-DoorKeyCrossingGeneralizationS9N3-v0',
         entry_point=lambda: doorkey_crossing_generalization(size=9, num_crossings=3)
     )
+
+    def randobjs3_color_generalize():
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-RandomObjects-3-v0') \
+            .add_eval('MiniGrid-RandomObjects-3-yellow-green-v0')
+        return multitask.build_env()
+    gym.register(
+        id='MiniGrid-RandomObjects-3-color-generalize-v0',
+        entry_point=randobjs3_color_generalize
+    )
+
+    def randobjs3_color_position_generalize():
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-RandomObjects-3-goal-left-v0') \
+            .add_eval('MiniGrid-RandomObjects-3-goal-right-color-v0')
+        return multitask.build_env()
+    gym.register(
+        id='MiniGrid-RandomObjects-3-color-pos-generalize-v0',
+        entry_point=randobjs3_color_position_generalize
+    )
+
+    
+    def doorkey_8x8_fixed_eval(**kwargs):
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-DoorKey-8x8-v0') \
+            .add_eval('MiniGrid-DoorKey-8x8-v0', task_seed=2)
+        return multitask.build_env()
+    gym.register(
+        id='MiniGrid-DoorKey-8x8-fixed-eval-v0',
+        entry_point=lambda: doorkey_8x8_fixed_eval()
+    )
+
+    def doorkey_8x8_fixed(**kwargs):
+        multitask = MultiTaskBuilder() \
+            .add_env('MiniGrid-DoorKey-8x8-v0', task_seed=2) \
+            .add_eval('MiniGrid-DoorKey-8x8-v0', task_seed=2)
+        return multitask.build_env()
+    gym.register(
+        id='MiniGrid-DoorKey-8x8-fixed-v0',
+        entry_point=lambda: doorkey_8x8_fixed()
+    )

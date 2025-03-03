@@ -68,7 +68,7 @@ class GoalWrapper(gym.Wrapper):
         info['task_reward'] = rew
         if not self._use_base_reward:
             rew = 0
-        rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost)
+        rew += self.extra_reward(obs, prev_abstract_state, prev_subgoal, prev_cost, term)
         rew = max(-self._clip_reward, min(rew, self._clip_reward)) # ensure reward doesn't spike (e.g. if plan cost is infinity)
 
         info['goal'] = self.subgoal
@@ -79,7 +79,7 @@ class GoalWrapper(gym.Wrapper):
         
         return np.concatenate([obs, self._observer.observe(self.subgoal)]), rew, term, trunc, info
     
-    def extra_reward(self, obs: Observation, prev_abstract: AbstractState, prev_subgoal: AbstractState, prev_cost: float) -> float:
+    def extra_reward(self, obs: Observation, prev_abstract: AbstractState, prev_subgoal: AbstractState, prev_cost: float, terminated: bool) -> float:
         """Override this function to do reward shaping"""
         return 0
 

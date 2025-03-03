@@ -104,6 +104,10 @@ class RandomObjectsEnv(MiniGridEnv):
     def __init__(
         self,
         num_objects = 1,
+        colors = ['blue', 'red'],
+        objects = ['ball', 'box'],
+        goal_positions = 'all',
+        obj_positions = 'all',
         max_steps: int = None,
         **kwargs,
     ):
@@ -113,6 +117,20 @@ class RandomObjectsEnv(MiniGridEnv):
         size = 5
         if max_steps is None:
             max_steps = 4 * size**2
+
+        self.color_choices = colors
+        object_map = {
+            'ball': Ball,
+            'box': Box
+        }
+        self.object_choices = [object_map[obj] for obj in objects]
+
+        self.goal_positions = goal_positions
+        if goal_positions == 'all':
+            self.goal_positions = [(i, j) for i in range(1,size-1) for j in range(1,size-1) if (i,j) != (size//2, size // 2)]
+        self.obj_positions = obj_positions
+        if obj_positions == 'all':
+            self.obj_positions = [(i, j) for i in range(1,size-1) for j in range(1,size-1) if (i,j) != (size//2, size // 2)]
 
         super().__init__(
             mission_space=mission_space,
@@ -138,27 +156,24 @@ class RandomObjectsEnv(MiniGridEnv):
         self.agent_pos = np.array(((width) // 2, (height) // 2))
         self.agent_dir = 0
 
-        positions = [(i, j) for i in range(1,width-1) for j in range(1,height-1)]
-        positions.remove((width//2, height // 2))
+        positions = self.obj_positions.copy()
+        
+        target_pos = tuple(self.np_random.choice(self.goal_positions))
+        if target_pos in positions:
+            positions.remove(target_pos)
+
         for i in range(self._num_objects):
-            color = self.np_random.choice(['blue', 'red'])
-            cls = self.np_random.choice([Ball, Box])
+            color = self.np_random.choice(self.color_choices)
+            cls = self.np_random.choice(self.object_choices)
             pos_idx = self.np_random.integers(0, len(positions))
             pos = positions[pos_idx]
             positions.remove(pos)
             self.put_obj(cls(color), *pos)
 
             if i == self._num_objects-1:
-                target_pos_idx = self.np_random.integers(0, len(positions))
-                target_pos = positions[target_pos_idx]
-                positions.remove(target_pos)
+                # make the last placed object the target
                 self.target = (color, cls, *target_pos)
                 self.put_obj(Goal(), *target_pos)
-
-    # def step(action):
-    #     obs, _, _, trunc, info = super().step(action)
-
-
 
 class HallwayChoiceEnv(MiniGridEnv):
     def __init__(
@@ -299,6 +314,33 @@ def register_custom_minigrid():
         entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
         kwargs={
             'num_objects': 3
+        }
+    )
+    register(
+        id='MiniGrid-RandomObjects-3-yellow-green-v0',
+        entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
+        kwargs={
+            'num_objects': 3,
+            'colors': ['yellow', 'green']
+        }
+    )
+    register(
+        id='MiniGrid-RandomObjects-3-goal-left-v0',
+        entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
+        kwargs={
+            'num_objects': 3,
+            'goal_positions': [(1,1), (1,2),(1,3),(2,1)],
+            'obj_positions': [(3,1), (3,2), (3,3), (2,3)]
+        }
+    )
+    register(
+        id='MiniGrid-RandomObjects-3-goal-right-color-v0',
+        entry_point='minimujo.custom_minigrid:RandomObjectsEnv',
+        kwargs={
+            'num_objects': 3,
+            'goal_positions': [(3,1), (3,2), (3,3), (2,3)],
+            'obj_positions': [(1,1), (1,2),(1,3),(2,1)],
+            'colors': ['yellow', 'green', 'purple', 'grey']
         }
     )
     DEFAULT_TASK_REGISTRY[RandomObjectsEnv] = get_random_objects_task

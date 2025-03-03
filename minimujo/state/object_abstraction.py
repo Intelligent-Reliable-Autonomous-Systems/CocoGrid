@@ -1,5 +1,5 @@
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar, List, Tuple
 
 from minimujo.color import COLOR_MAP
@@ -26,6 +26,9 @@ class ObjectAbstraction:
 
     # which objects/agent are near to each other, using same index as rooms
     nears: Tuple[Tuple[int, int]]
+
+    # a hacky way to keep track of positions for debugging
+    _positions: List[Tuple[int, int]] = field(compare=False, default=None)
 
     def __post_init__(self):
         for room in self.rooms:
@@ -80,7 +83,7 @@ class ObjectAbstraction:
 
         new_nears = tuple(sorted(filtered_pairs + ((0, target_idx+1),)))
 
-        return ObjectAbstraction(self.objects, self.rooms, new_nears)
+        return ObjectAbstraction(self.objects, self.rooms, new_nears, _positions=self._positions)
 
     def move_away_from_objects(self):
         # # move the agent and held objects
@@ -92,7 +95,7 @@ class ObjectAbstraction:
             if pair[0] != 0 and pair[1] != 0
         )
 
-        return ObjectAbstraction(self.objects, self.rooms, new_nears)
+        return ObjectAbstraction(self.objects, self.rooms, new_nears, _positions=self._positions)
     
     def pick_up_object(self, target_idx):
         if self.get_held_object() != -1:
@@ -119,7 +122,7 @@ class ObjectAbstraction:
             if pair[0] != target_idx and pair[1] != target_idx
         )
 
-        return ObjectAbstraction(new_objects, self.rooms, new_nears)
+        return ObjectAbstraction(new_objects, self.rooms, new_nears, _positions=self._positions)
     
     def drop_object(self):
         held_idx = self.get_held_object()
@@ -143,7 +146,7 @@ class ObjectAbstraction:
         )
         new_nears = tuple(sorted(new_nears))
 
-        return ObjectAbstraction(new_objects, self.rooms, new_nears)
+        return ObjectAbstraction(new_objects, self.rooms, new_nears, _positions=self._positions)
     
     def open_door(self):
         # get near door
@@ -175,7 +178,7 @@ class ObjectAbstraction:
             for i, value in enumerate(self.objects)
         )
 
-        return ObjectAbstraction(new_objects, self.rooms, self.nears)
+        return ObjectAbstraction(new_objects, self.rooms, self.nears, _positions=self._positions)
     
     def go_through_door(self):
         # get near door
@@ -204,7 +207,7 @@ class ObjectAbstraction:
             for idx, value in enumerate(self.rooms)
         )
 
-        return ObjectAbstraction(self.objects, new_rooms, self.nears)
+        return ObjectAbstraction(self.objects, new_rooms, self.nears, _positions=self._positions)
     
     def get_possible_actions(self):
         next_states = dict()
@@ -337,7 +340,7 @@ class ObjectAbstraction:
                     nears.append((idx_a, idx_b))
         nears = tuple(nears)
 
-        return ObjectAbstraction(objects, rooms, nears)
+        return ObjectAbstraction(objects, rooms, nears, _positions=positions)
     
     @staticmethod
     def set_adjacency(adjacencies, idx_a, idx_b, val):

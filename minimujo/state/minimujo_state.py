@@ -10,6 +10,9 @@ import numpy as np
 @dataclass
 class MinimujoState:
 
+    POSE_IDX_POS: ClassVar[int] = 0
+    POSE_IDX_QUAT: ClassVar[int] = 3
+    POSE_IDX_VEL: ClassVar[int] = 7
     OBJECT_IDX_TYPE: ClassVar[int] = 0
     OBJECT_IDX_POS: ClassVar[int] = 1
     OBJECT_IDX_DOOR_ORIENTATION: ClassVar[int] = 5
@@ -48,6 +51,11 @@ class MinimujoState:
     
     def get_walker_velocity(self):
         return self.pose[7:10]
+    
+    @staticmethod
+    def get_object_pos_slice(dim: int = 3):
+        assert 1 <= dim <= 3
+        return slice(MinimujoState.OBJECT_IDX_POS, MinimujoState.OBJECT_IDX_POS+dim)
 
 class MinimujoStateObserver:
 

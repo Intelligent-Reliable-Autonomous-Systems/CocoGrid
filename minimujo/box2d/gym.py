@@ -358,9 +358,11 @@ class Box2DEnv(gym.Env):
         for index, (obj, object_id, color_id, state) in enumerate(self.objects):
             object_array[index, 0] = object_id
             object_array[index, 1:3] = obj.position.tuple
-            object_array[index, 4] = obj.angle
             if object_id == ObjectEnum.DOOR.value:
+                object_array[index, 4] = obj.angle - self.door_dirs[obj]
                 object_array[index, 5] = self.door_dirs[obj] / np.pi
+            else:
+                object_array[index, 4] = obj.angle
             object_array[index, 8:10] = obj.linearVelocity.tuple
             object_array[index, 11] = obj.angularVelocity
             object_array[index, 14:16] = (color_id, state)

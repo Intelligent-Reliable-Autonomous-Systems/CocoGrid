@@ -145,8 +145,7 @@ class LoggingWrapper(gym.Wrapper):
         if not LoggingWrapper.do_logging or not self._do_logging:
             return super().reset(seed=seed, options=options)
         
-        if not self.has_logged_episode:
-            self.has_logged_episode = True
+        if self.timestep > 0 and not self.has_logged_episode:
             for metric in self.metrics:
                 try:
                     metric.on_episode_end(timesteps=self.timestep, episode=self.episode_count)
@@ -156,6 +155,7 @@ class LoggingWrapper(gym.Wrapper):
                         raise e
         self.episode_count += 1
         self.timestep = 0
+        self.has_logged_episode = False
         obs, info = super().reset(seed=seed, options=options)
         for metric in self.metrics:
             try:
@@ -179,8 +179,7 @@ class LoggingWrapper(gym.Wrapper):
                 if self.raise_errors:
                     raise e
         self.timestep += 1
-        self.has_logged_episode = False
-        if term or trunc:
+        if term or trunc and not self.has_logged_episode:
             self.has_logged_episode = True
             for metric in self.metrics:
                 try:

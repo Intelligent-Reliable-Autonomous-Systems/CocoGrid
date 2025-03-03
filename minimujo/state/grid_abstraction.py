@@ -30,7 +30,7 @@ class GridAbstraction:
     DOOR_STATE_CLOSED = 0
     DOOR_STATE_OPEN = 1
 
-    def __init__(self, grid: np.ndarray, walker_pos: Tuple[int], objects: List[Tuple[int]]) -> None:
+    def __init__(self, grid: np.ndarray, walker_pos: Tuple[int], objects: List[Tuple[int]], snap_held_to_agent=True) -> None:
         self.grid: np.ndarray = grid
         self._grid_hash: str = hash_ndarray(self.grid)
 
@@ -39,7 +39,7 @@ class GridAbstraction:
         self.objects = objects.copy()
         self._doors = [obj for obj in self.objects if obj[0] == GridAbstraction.DOOR_IDX]
         self._held_object = next((i for i, o in enumerate(self.objects) if o[0] != GridAbstraction.DOOR_IDX and o[4] > 0), -1)
-        if self._held_object > -1:
+        if snap_held_to_agent and self._held_object > -1:
             # held object should be snapped to walker position
             idx, _, _, color, state = self.objects[self._held_object]
             self.objects[self._held_object] = (idx, walker_pos[0], walker_pos[1], color, state)
@@ -145,7 +145,108 @@ class GridAbstraction:
         return (wx - tx)**2 + (wy - ty)**2
     
     @staticmethod
-    def from_minimujo_state(minimujo_state: MinimujoState, force_door_evict=False):
+    def distance_between_states(minimujo_state: MinimujoState, cur_abstract: GridAbstraction, target_abstract: GridAbstraction):
+        total_dist = 0
+        wx = minimujo_state.pose[0] / minimujo_state.xy_scale
+        wy = -minimujo_state.pose[1] / minimujo_state.xy_scale
+
+        if cur_abstract.walker_pos != target_abstract.walker_pos:
+
+            def clamp(x, a, b):
+                return max(a, min(x, b))
+            grid_pos = target_abstract.walker_pos
+            tx = clamp(wx, grid_pos[0], grid_pos[0]+1)
+            ty = clamp(wy, grid_pos[1], grid_pos[1]+1)
+            total_dist += (wx - tx)**2 + (wy - ty)**2
+
+        for obj_state, cur_obj, targ_obj in zip(minimujo_state.objects, cur_abstract.objects, target_abstract.objects):
+            if cur_obj[0] == GridAbstraction.DOOR_IDX:
+                # door shaping
+                if targ_obj[4] == 0 and cur_obj[4] > 0:
+                    # door needs to be opened. distance based on angle from open
+                    total_dist = min((np.pi / 4) - abs(obj_state[4]), 1) / 2
+                    # also reward going towards door
+                    ox, oy = obj_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+                    oy *= -1
+                    if cur_obj[4] >= 2: # locked
+                        door_color = cur_obj[3]
+                        for targ_state, targ_obj in zip(minimujo_state.objects, cur_abstract.objects):
+                            if targ_obj[3] == door_color and targ_obj[0] == GridAbstraction.KEY_IDX and targ_obj[4] > 0:
+                                # is a held key that can unlock door
+                                kx, ky = targ_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+                                ky = -ky
+                                # total_dist += ((kx - ox)**2 + (ky - oy)**2) / 2.48
+                                total_dist += np.linalg.norm([kx-ox, ky-oy]) / 3
+                                break
+                    else:
+                        # total_dist += ((wx - ox)**2 + (wy - oy)**2) / 2.48
+                        total_dist += np.linalg.norm([wx-ox, wy-oy]) / 3
+                    break
+            else:
+                # check held object
+                if targ_obj[4] == 1 and cur_obj[4] == 0:
+                    # need to hold object; go towards it
+                    ox, oy = obj_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+                    oy *= -1
+                    total_dist += ((wx - ox)**2 + (wy - oy)**2) / 1.41
+
+        return total_dist
+
+    # @staticmethod
+    # def distance_vel_from_state(minimujo_state: MinimujoState, cur_abstract: GridAbstraction, target_abstract: GridAbstraction):
+    #     """Compute a continuous 'distance' from the target abstract state based on distance and velocity"""
+    #     # get agent position and velocity
+    #     from_pos = minimujo_state.pose[MinimujoState.POSE_IDX_POS:MinimujoState.POSE_IDX_POS+2] / minimujo_state.xy_scale
+    #     vel = minimujo_state.pose[MinimujoState.POSE_IDX_VEL:MinimujoState.POSE_IDX_VEL+2]
+        
+    #     dist_weight, vel_weight = 0.5, 0.5
+    #     targ_pos = None
+    #     total = 0
+
+    #     if cur_abstract.walker_pos != target_abstract.walker_pos:
+    #         # agent needs to move to the boundary of the next subogal
+    #         tx, ty = target_abstract.walker_pos
+    #         targ_pos = np.clip(from_pos, [tx, -(ty+1)], [tx+1, -ty])
+
+    #     for obj_state, cur_obj, targ_obj in zip(minimujo_state.objects, cur_abstract.objects, target_abstract.objects):
+    #         if cur_obj[0] == GridAbstraction.DOOR_IDX:
+    #             # door shaping
+    #             if targ_obj[4] == 0 and cur_obj[4] > 0:
+    #                 # door needs to be opened. distance based on angle from open
+    #                 total = min(np.pi / 4 - abs(obj_state[4]), 1) * 0.4
+    #                 # weight the velocity less to not punish going against the door
+    #                 dist_weight, vel_weight = 0.5, 0.1
+    #                 # set the door as the target position
+    #                 targ_pos = obj_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+    #                 if cur_obj[4] >= 2: # locked
+    #                     door_color = cur_obj[3]
+    #                     for targ_state, targ_obj in zip(minimujo_state.objects, cur_abstract.objects):
+    #                         if targ_obj[3] == door_color and targ_obj[0] == GridAbstraction.KEY_IDX and targ_obj[4] > 0:
+    #                             # is a held key that can unlock door. use the key as from_pos to encourage it to go to the door
+    #                             from_pos = targ_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+    #                             vel = targ_state[MinimujoState.OBJECT_IDX_VEL:MinimujoState.OBJECT_IDX_VEL+2]
+    #                             break
+    #         else:
+    #             # check held object
+    #             if targ_obj[4] == 1 and cur_obj[4] == 0:
+    #                 # need to hold object; set it as the target position
+    #                 targ_pos = obj_state[MinimujoState.OBJECT_IDX_POS:MinimujoState.OBJECT_IDX_POS+2] / minimujo_state.xy_scale
+
+    #     if targ_pos is not None:
+    #         dist = np.linalg.norm(targ_pos - from_pos)
+    #         direction = (targ_pos - from_pos) / dist
+    #         aligned_vel = np.dot(vel, direction)
+
+    #         # distance should be near 1 when far away and near 0 when close
+    #         dist_part = 1 - np.exp(-2 * dist)
+    #         # velocity should be near 1 when not moving towards target and near 0 when moving fast towards it
+    #         vel_part = min(1, np.exp(-0.9 * aligned_vel))
+    #         print('distvel', vel, aligned_vel, dist_part, vel_part)
+    #         total += dist_weight * dist_part + vel_weight * vel_part
+    #     return total
+    
+    @staticmethod
+    def from_minimujo_state(minimujo_state: MinimujoState, force_door_evict=False, snap_held_to_agent=True):
         def obj_to_grid(object_state: np.ndarray):
             id = object_state[0]
             col, row = GridAbstraction.continuous_position_to_grid(object_state[1:4], minimujo_state.xy_scale)
@@ -176,7 +277,7 @@ class GridAbstraction:
                         new_pos = pos_diff * ((1,0) if abs(np.cos(door_dir)) > abs(np.sin(door_dir)) else (0,1)) + other_abstract[1:3]
                         objects[idx] = (other_abstract[0], *new_pos, *other_abstract[3:5])
         
-        return GridAbstraction(minimujo_state.grid, walker_pos, objects)
+        return GridAbstraction(minimujo_state.grid, walker_pos, objects, snap_held_to_agent=snap_held_to_agent)
 
     @staticmethod
     def continuous_position_to_grid(pos, xy_scale):
