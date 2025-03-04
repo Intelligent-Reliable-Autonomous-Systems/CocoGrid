@@ -344,7 +344,7 @@ class MazeArena(composer.Arena):
   def ground_geoms(self):
     return tuple([
         geom for geom in self.mjcf_model.find_all('geom')
-        if 'ground' in geom.name
+        if geom.name is not None and 'ground' in geom.name
     ])
 
   def find_token_grid_positions(self, tokens):

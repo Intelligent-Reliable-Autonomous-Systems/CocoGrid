@@ -37,6 +37,12 @@ def ensure_env():
         if f'Minimujo-{args.env}' in minimujo_suite.SUITE.keys():
             args.env = f'Minimujo-{args.env}'
             return
+        elif f'Minimujo-{args.env}-v0' in minimujo_suite.SUITE.keys():
+            args.env = f'Minimujo-{args.env}-v0'
+            return
+        elif f'{args.env}-v0' in minimujo_suite.SUITE.keys():
+            args.env = f'{args.env}-v0'
+            return
         print(f'Warning: {args.env} not a Minimujo environment')
         # raise Exception(f"Cannot spawn interactive session with invalid environment, {args.env}")
 
@@ -207,7 +213,7 @@ elif args.minigrid:
         highlight=False
     )
 
-    manual_control = ManualControl(env)
+    manual_control = ManualControl(env, seed=args.seed)
     try:
         manual_control.start()
     except:
