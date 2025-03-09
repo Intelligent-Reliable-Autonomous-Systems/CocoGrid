@@ -1,2 +1,0 @@
-dm_control
-minigrid

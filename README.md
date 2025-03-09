@@ -1,30 +1,28 @@
-# Minimujo
+# Cocogrid
 
-A continuous control RL environment based on MuJoCo ([dm_control](https://github.com/google-deepmind/dm_controlhttps://)). Extends the discrete gridworld [Minigrid](https://github.com/Farama-Foundation/Minigridhttps://) to a continuous action and observation space. Supports many grid configurations, multiple objects, and custom tasks. It is easily extensible.
+A continuous control RL environment that extends the discrete gridworld [Minigrid](https://github.com/Farama-Foundation/Minigridhttps://) to a continuous action and observation space. Cocogrid supports both 2D and 3D physics with [Box2D](https://pypi.org/project/Box2D/) and MuJoCo ([dm_control](https://github.com/google-deepmind/dm_controlhttps://)). Supports many grid configurations, multiple objects, and custom tasks. It is easily extensible.
 
 ## Installation
 
 ```bash
-$ git clone https://gitlab.engr.oregonstate.edu/jewettje/minimujo
-$ cd minimujo
+$ git clone https://gitlab.engr.oregonstate.edu/jewettje/cocogrid
+$ cd cocogrid
 $ pip install -e .
-$ export MUJOCO_GL=osmesa
-$ export PYOPENGL_PLATFORM=osmesa
 ```
 
 The OpenGL options for `$MUJOCO_GL` and `$PYOPENGL_PLATFORM` are `osmesa` (software rendering), `glfw` (windowed rendering), and `egl` (windowless hardware-accelerated rendering). `egl` is ideal with a GPU, but can be tricky to set up.
 
 ## Instantiation
 
-A minimujo environment can be instantiated by importing `minimujo` and using `gymnasium.make`.
+A cocogrid environment can be instantiated by importing `cocogrid` and using `gymnasium.make`.
 
 ```python
-import minimujo
+import cocogrid
 import gymnasium
-env = gymnasium.make('Minimujo-Empty-5x5-v0', timesteps=500)
+env = gymnasium.make('Cocogrid-Empty-5x5-v0', timesteps=500)
 ```
 
-Minimujo supports the following parameters:
+Cocogrid supports the following parameters:
 
 - **`walker_type`** (default `'square'`)
   
@@ -42,14 +40,14 @@ Minimujo supports the following parameters:
   
   - How many steps to run before terminating the episode.
   - Values: any int >= 1
-- `get_task_function` (default `minimujo.state.tasks.get_grid_goal_task`)
+- `get_task_function` (default `cocogrid.state.tasks.get_grid_goal_task`)
   
   - A function to get the task function for each episode. Takes a Minigrid environment as input and returns a task function, as described below.
   - Value: a function of the form `def my_get_task_function(minigrid: minigrid.minigrid_env.MiniGridEnv) -> Callable`
 - `task_function` (default `None`)
   
   - This overrides `get_task_function` to use the same task_function for every episode. The task function takes in the previous and current arena states and outputs a tuple of (reward, terminate).
-  - Value: a function of the form `def my_task_function(prev_state: MinimujoState, current_state: MinimujoState) -> Tuple[float, bool]`
+  - Value: a function of the form `def my_task_function(prev_state: CocogridState, current_state: CocogridState) -> Tuple[float, bool]`
 - `spawn_position` (default `None`)
   
   - If specified, sets the position of the agent to a fixed position at the start of each episode.
@@ -76,9 +74,9 @@ Minimujo supports the following parameters:
 
 ## Utility
 
-For convenient testing, there is a utility command `python -m minimujo`. These are the utilities:
+For convenient testing, there is a utility command `python -m cocogrid`. These are the utilities:
 
-- `--list`, `-l`: list the available minimujo environment ids.
+- `--list`, `-l`: list the available cocogrid environment ids.
 - `--gym`, `-g`: spawn an interactive window with keyboard input.
 - `--minigrid`, `-m`: spawns an interactive window for a grid world
 - `--detail`, `-d`: give details about the selected environment
@@ -101,11 +99,11 @@ And these are the parameters you can pass into the utility:
 Examples:
 
 ```bash
-$ python -m minimujo -g -e Minimujo-Empty-5x5-v0 -w ball -t 200
+$ python -m cocogrid -g -e Cocogrid-Empty-5x5-v0 -w ball -t 200
 ```
 
 ```bash
-$ python -m minimujo -d -e Minimujo-Empty-5x5-v0
+$ python -m cocogrid -d -e Cocogrid-Empty-5x5-v0
 ```
 
 

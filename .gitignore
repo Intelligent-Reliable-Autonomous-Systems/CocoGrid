@@ -2,7 +2,7 @@
 __pycache__
 .vscode
 *.png
-!minimujo/**/*.png
+!cocogrid/**/*.png
 *.egg-info
 runs
 build/
