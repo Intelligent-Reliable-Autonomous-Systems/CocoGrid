@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from dm_control import composer
 
-from cocogrid.dmc_gym import CocogridGym
+from cocogrid.mujoco.dmc_gym import CocogridGym
 from cocogrid.engine import Engine
 from cocogrid.mujoco.cocogrid_arena import CocogridArena
 from cocogrid.mujoco.cocogrid_task import CocogridTask
@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     import gymnasium as gym
 
     from cocogrid.agent import Agent
-    from cocogrid.state.observation import ObservationSpecification
+    from cocogrid.common.observation import ObservationSpecification
 
 
 class MujocoEngine(Engine):

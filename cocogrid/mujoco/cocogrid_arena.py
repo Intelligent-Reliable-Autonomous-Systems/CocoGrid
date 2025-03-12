@@ -6,13 +6,13 @@ from dm_control import composer
 from dm_control.composer.observation import observable
 from minigrid.core.world_object import Ball, Box, Door, Goal, Key, Lava, Wall
 
-from cocogrid.entities.ball_entity import BallEntity
-from cocogrid.entities.box_entity import BoxEntity
-from cocogrid.entities.contact_tile_entity import ContactTileEntity
-from cocogrid.entities.door_entity import DoorEntity
-from cocogrid.entities.key_entity import KeyEntity
-from cocogrid.grabber import Grabber
-from cocogrid.maze_arena import MazeArena
+from cocogrid.mujoco.entities.ball_entity import BallEntity
+from cocogrid.mujoco.entities.box_entity import BoxEntity
+from cocogrid.mujoco.entities.contact_tile_entity import ContactTileEntity
+from cocogrid.mujoco.entities.door_entity import DoorEntity
+from cocogrid.mujoco.entities.key_entity import KeyEntity
+from cocogrid.mujoco.grabber import Grabber
+from cocogrid.mujoco.maze_arena import MazeArena
 from cocogrid.mujoco.observables import CocogridStateObserver
 from cocogrid.utils.minigrid import get_labmaze_from_minigrid
 
@@ -53,7 +53,9 @@ class CocogridArena(MazeArena):
         self.spawn_position = spawn_position
         self.spawn_sampler = spawn_sampler
         self._minigrid_seed = seed
-        self._minigrid_options = {} or reset_options
+        self._minigrid_options = reset_options or {}
+        self._reset_seed = None
+        self._reset_options = {}
 
         self._minigrid.reset(seed=self._minigrid_seed, options=self._minigrid_options)
 
@@ -152,7 +154,12 @@ class CocogridArena(MazeArena):
 
     def initialize_arena_mjcf(self, random_state=None):
         if not self._already_initialized:
-            self._minigrid.reset(seed=self._minigrid_seed, options=self._minigrid_options)
+            # use _reset_seed and _reset_options for the current episode, then flush.
+            minigrid_seed=self._reset_seed or self._minigrid_seed
+            minigrid_options={**self._minigrid_options, **self._reset_options}
+            self._minigrid.reset(seed=minigrid_seed, options=minigrid_options)
+            self._reset_seed = None
+            self._reset_options = {}
         self._maze = get_labmaze_from_minigrid(self._minigrid)
         self.regenerate()
 

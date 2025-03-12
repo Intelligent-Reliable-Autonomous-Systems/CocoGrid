@@ -1,7 +1,7 @@
 import gymnasium as gym
 import numpy as np
 
-from cocogrid.state.cocogrid_state import CocogridState
+from cocogrid.common.cocogrid_state import CocogridState
 
 POSE_SIZE = 13
 OBJECT_SIZE = 16

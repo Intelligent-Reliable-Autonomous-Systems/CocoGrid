@@ -2,9 +2,10 @@ import os
 
 from dm_control import mjcf
 
-from cocogrid.color import get_color_rgba
-from cocogrid.entities.grabbable_entity import GrabbableEntity
-from cocogrid.entities import ObjectEnum, get_color_id
+from cocogrid.common.color import get_color_rgba
+from cocogrid.common.entity import ObjectEnum, get_color_id
+from cocogrid.mujoco.entities.grabbable_entity import GrabbableEntity
+
 
 class BoxEntity(GrabbableEntity):
     """A box Entity which can be grabbed."""

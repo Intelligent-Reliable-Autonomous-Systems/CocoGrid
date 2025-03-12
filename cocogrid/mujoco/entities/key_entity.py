@@ -1,11 +1,12 @@
 import os
 
-from dm_control import mjcf
 import numpy as np
+from dm_control import mjcf
 
-from cocogrid.color import get_color_rgba
-from cocogrid.entities.grabbable_entity import GrabbableEntity
-from cocogrid.entities import ObjectEnum, get_color_id
+from cocogrid.common.color import get_color_rgba
+from cocogrid.common.entity import ObjectEnum, get_color_id
+from cocogrid.mujoco.entities.grabbable_entity import GrabbableEntity
+
 
 class KeyEntity(GrabbableEntity):
     """A key Entity which attaches to agent model and can unlock doors."""

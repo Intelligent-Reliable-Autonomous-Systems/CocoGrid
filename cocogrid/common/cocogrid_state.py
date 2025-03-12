@@ -7,7 +7,7 @@ import numpy as np
 from minigrid.core.world_object import Goal, Lava, Wall
 from minigrid.minigrid_env import MiniGridEnv
 
-from cocogrid.color import get_color_idx
+from cocogrid.common.color import get_color_idx
 
 
 @dataclass

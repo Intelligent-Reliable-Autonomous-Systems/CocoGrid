@@ -1,11 +1,10 @@
 import os
 
-from dm_control import composer
-from dm_control import mjcf
 import numpy as np
+from dm_control import composer, mjcf
 
-from cocogrid.color import get_color_rgba
-from cocogrid.entities import ObjectEnum, get_color_id
+from cocogrid.common.color import get_color_rgba
+from cocogrid.common.entity import ObjectEnum, get_color_id
 
 DOOR_QUATS = [
     [1, 0, 0, 0], # up

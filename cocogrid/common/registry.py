@@ -14,4 +14,4 @@ class NotRegisteredError(Exception):
 
     def __init__(self, registry: str, id: str) -> None:
         """Initialize the error with registry and entity ID."""
-        super().__init__(f"Registry {registry} does not contain an entity with ID {id}.")
+        super().__init__(f"Registry {registry} does not contain an entity with key {id}.")

@@ -1,7 +1,9 @@
 # inspired from https://github.com/denisyarats/dmc2gym
+from __future__ import annotations
 
 import logging
 import os
+from typing import Any
 from gymnasium.spaces import Box, Dict
 from gymnasium.core import Env
 import numpy as np
@@ -9,8 +11,8 @@ from dm_control import suite
 from dm_env import specs
 
 from cocogrid.mujoco.cocogrid_arena import CocogridArena
-from cocogrid.state.cocogrid_state import CocogridState
-from cocogrid.state.observation import get_observation_spec
+from cocogrid.common.cocogrid_state import CocogridState
+from cocogrid.common.observation import get_observation_spec
 
 
 def _spec_to_box(spec, dtype=np.float32):
@@ -279,9 +281,11 @@ class CocogridGym(DMCGym):
         obs_space, obs_func = self._observation_spec.build_observation_space(state)
         return obs_space, lambda timestep: obs_func(self.state)
 
-    def reset(self, **kwargs):
+    def reset(self, seed: int | None = None, options: dict[str, Any] | None = None):
         self._observation_spec.reset(self.state)
-        return super().reset(**kwargs)
+        self.arena._reset_seed = seed
+        self.arena._reset_options = options or {}
+        return super().reset()
 
     @property
     def state(self) -> CocogridState:

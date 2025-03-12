@@ -7,7 +7,7 @@ import gymnasium as gym
 import numpy as np
 from tensorboardX import SummaryWriter
 
-from cocogrid.dmc_gym import DMCGym
+from cocogrid.mujoco.dmc_gym import DMCGym
 from cocogrid.mujoco.cocogrid_arena import CocogridArena
 from cocogrid.utils.logging import LoggingMetric, capped_cubic_logging_schedule
 from cocogrid.utils.visualize.weighted_kde import WeightedKDEHeatmap, get_heatmap_figure

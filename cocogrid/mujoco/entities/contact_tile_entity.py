@@ -4,7 +4,7 @@ from dm_control import composer
 from dm_control import mjcf
 import numpy as np
 
-from cocogrid.color import get_color_rgba, get_light_variation
+from cocogrid.common.color import get_color_rgba, get_light_variation
 
 class ContactTileEntity(composer.Entity):
     """A ball Entity which can be grabbed."""

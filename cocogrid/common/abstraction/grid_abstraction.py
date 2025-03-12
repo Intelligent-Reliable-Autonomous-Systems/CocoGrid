@@ -1,17 +1,25 @@
 from __future__ import annotations
-from collections import deque
+
 import hashlib
 import pickle
 import re
 import sys
+from collections import deque
 from typing import List, Tuple
 
 import gymnasium as gym
 import numpy as np
-from cocogrid.color import COLOR_MAP, get_color_idx
-from cocogrid.entities import ObjectEnum
-from cocogrid.state.goal_wrapper import DeterministicValueIterationPlanner, DjikstraBackwardsPlanner, GoalObserver, GoalWrapper
-from cocogrid.state.cocogrid_state import CocogridState
+
+from cocogrid.common.abstraction.goal_wrapper import (
+    DeterministicValueIterationPlanner,
+    DjikstraBackwardsPlanner,
+    GoalObserver,
+    GoalWrapper,
+)
+from cocogrid.common.cocogrid_state import CocogridState
+from cocogrid.common.color import COLOR_MAP, get_color_idx
+from cocogrid.common.entity import ObjectEnum
+
 
 class GridAbstraction:
     ACTION_UP = 0
@@ -517,14 +525,3 @@ def hash_list_of_tuples(list_of_tuples):
     list_bytes = pickle.dumps(list_of_tuples)
     hash_obj = hashlib.md5(list_bytes, **md5_kwargs)
     return hash_obj.hexdigest()
-
-# if __name__ == "__main__":
-#     import gymnasium as gym
-#     from cocogrid.state.cocogrid_state import CocogridStateObserver
-#     minigrid_id = "MiniGrid-Empty-5x5-v0"
-#     # minigrid_id = "MiniGrid-Playground-v0"
-#     minigrid_env = gym.make(minigrid_id, render_mode='human').unwrapped
-#     minigrid_env.reset()
-#     grid = CocogridStateObserver.get_grid_state_from_minigrid(minigrid_env)
-#     row, col = minigrid_env.agent_pos
-#     GridAbstraction(grid, (col, row))

@@ -2,7 +2,7 @@ import functools
 from dm_control import suite
 from gymnasium.envs.registration import register
 
-from cocogrid.dmc_gym import DMCGym
+from cocogrid.mujoco.dmc_gym import DMCGym
 
 def get_gym_env_from_suite(domain, task, task_kwargs=None, env_kwargs=None, image_observation_format='0-255', render_mode='rgb_array', render_width=64):
     return DMCGym(

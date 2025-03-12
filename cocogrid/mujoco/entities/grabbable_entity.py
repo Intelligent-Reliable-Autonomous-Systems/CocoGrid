@@ -1,7 +1,7 @@
 from dm_control import composer
 import numpy as np
 
-from cocogrid.color import get_light_variation
+from cocogrid.common.color import get_light_variation
 
 class GrabbableEntity(composer.Entity):
 

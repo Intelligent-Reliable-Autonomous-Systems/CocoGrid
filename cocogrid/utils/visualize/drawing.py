@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 import gymnasium as gym
 
-from cocogrid.dmc_gym import CocogridGym
+from cocogrid.mujoco.dmc_gym import CocogridGym
 from cocogrid.box2d.gym import Box2DEnv
 
 def get_camera_bounds(env: gym.Env, norm_scale: bool = False) -> Tuple[float,float,float,float]:

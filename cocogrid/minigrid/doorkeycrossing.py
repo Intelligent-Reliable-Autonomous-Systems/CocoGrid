@@ -21,7 +21,7 @@ class DoorKeyCrossingEnv(MiniGridEnv):
         self,
         size=9,
         num_crossings=1,
-        obstacle_type=Lava,
+        obstacle_type=Wall,
         max_steps: int | None = None,
         **kwargs,
     ):

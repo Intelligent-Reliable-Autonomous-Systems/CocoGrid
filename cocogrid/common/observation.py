@@ -4,8 +4,8 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from cocogrid.entities import COLOR_TO_IDX
-from cocogrid.state.cocogrid_state import CocogridState
+from cocogrid.common.entity import COLOR_TO_IDX
+from cocogrid.common.cocogrid_state import CocogridState
 
 # Indicates that a value should be inferred during the first reset()
 # Can cause problems if the the number of objects, etc changes

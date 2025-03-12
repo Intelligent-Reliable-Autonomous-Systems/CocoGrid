@@ -4,7 +4,7 @@ from dm_control import composer
 from dm_control.mujoco.wrapper import mjbindings
 
 from cocogrid.mujoco.observables import FullVectorSpecification
-from cocogrid.state.tasks import get_grid_goal_task
+from cocogrid.tasks import get_grid_goal_task
 
 if TYPE_CHECKING:
     from cocogrid.mujoco.mujoco_agent import MuJoCoAgent

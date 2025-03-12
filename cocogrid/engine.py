@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
-import gymnasium as gym
+if TYPE_CHECKING:
+    import gymnasium as gym
 
-from cocogrid.agent import Agent
-from cocogrid.state.observation import ObservationSpecification
+    from cocogrid.agent import Agent
+    from cocogrid.common.observation import ObservationSpecification
 
 ENGINE_REGISTRY: dict[str, Engine] = {}
 

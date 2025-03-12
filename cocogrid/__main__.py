@@ -13,20 +13,21 @@ Available commands:
 
 Examples:
     # List all environments
-    python -m cocogrid list
+    cocogrid list
 
     # Run an interactive environment
-    python -m cocogrid interactive --env Empty-5x5
+    cocogrid interactive --env Empty-5x5
 
     # Run a gym environment
-    python -m cocogrid gym --env Empty-5x5 --episodes 10
+    cocogrid gym --env Empty-5x5 --episodes 10
 
     # Get details about an environment
-    python -m cocogrid detail --env Empty-5x5
+    cocogrid detail --env Empty-5x5
 
     # Filter environments
-    python -m cocogrid list "empty,door"  # Show environments with "empty" or "door"
-    python -m cocogrid list "!door"       # Exclude environments with "door"
+    cocogrid list "empty,door"  # Show environments with "empty" or "door"
+    cocogrid list "!door"       # Exclude environments with "door"
+
 """
 
 import argparse
@@ -56,36 +57,23 @@ def get_gym_env(args: argparse.Namespace) -> gym.Env:
     return gym.make(
         args.env,
         seed=args.seed,
-        walker_type=args.walker,
-        observation_type=args.obs,
+        agent=args.agent,
+        observation=args.obs,
         xy_scale=args.scale,
-        random_spawn=args.random_spawn,
-        random_rotation=args.random_rotate,
         timesteps=args.timesteps,
     )
 
 
 def run_interactive_environment(args: argparse.Namespace) -> None:
-    """Run an interactive MuJoCo environment with a 3D view."""
+    """Run an interactive MuJoCo environment with a 3D view. Requires GLFW rendering."""
     import os
 
     import numpy as np
-    from dm_control import suite, viewer
+    from dm_control import viewer
 
     ensure_env(args)
 
-    env = suite.load(
-        "cocogrid",
-        args.env,
-        task_kwargs={
-            "walker_type": args.walker,
-            "seed": args.seed,
-        },
-        environment_kwargs={
-            "observation_type": args.obs,
-            "xy_scale": args.scale,
-        },
-    )
+    env = get_gym_env(args).unwrapped._env
 
     os.environ["MUJOCO_GL"] = "glfw"
     import glfw
@@ -241,8 +229,8 @@ def list_environments(args: argparse.Namespace) -> None:
 
     # Parse filters
     filters = args.filters.split(",") if args.filters else []
-    include_filters = {sensitivity(f) for f in filters if not f.startswith("!")}
-    exclude_filters = {sensitivity(f[1:]) for f in filters if f.startswith("!")}
+    include_filters = {sensitivity(f) for f in filters if not f.startswith("^")}
+    exclude_filters = {sensitivity(f[1:]) for f in filters if f.startswith("^")}
 
     # Apply inclusion filtering (if any include filters exist, require at least one match)
     if include_filters:
@@ -259,7 +247,7 @@ def list_environments(args: argparse.Namespace) -> None:
 
 def get_details(args: argparse.Namespace) -> None:
     """Get details about an environment."""
-    from cocogrid.custom_minigrid import CUSTOM_ENVS
+    from cocogrid.minigrid import CUSTOM_MINIGRID_ENVS
 
     ensure_env(args)
 
@@ -268,7 +256,7 @@ def get_details(args: argparse.Namespace) -> None:
 
     minigrid_env.reset(seed=args.seed)
 
-    if type(minigrid_env) in CUSTOM_ENVS:
+    if type(minigrid_env) in CUSTOM_MINIGRID_ENVS:
         print(f"{args.env} is a custom environment part of the Cocogrid package\n")
     else:
         print(f"{args.env} corresponds to MiniGrid environment {minigrid_env_id}\n")
@@ -294,19 +282,22 @@ def test_framerate(args: argparse.Namespace) -> None:
 
         num_envs = args.sync_vec
         env = SyncVectorEnv([lambda: get_gym_env(args)] * args.sync_vec)
+        gym_info = f"{num_envs}x SyncVectorEnv"
     elif args.async_vec > 0:
         from gymnasium.vector import AsyncVectorEnv
 
         num_envs = args.async_vec
         env = AsyncVectorEnv([lambda: get_gym_env(args)] * args.async_vec)
+        gym_info = f"{num_envs}x AsyncVectorEnv"
     else:
         num_envs = 1
         env = get_gym_env(args)
+        gym_info = "gym env"
 
     def run_env() -> None:
         """Run the environment for N_STEPS."""
         print(
-            f"Testing gym env {args.env} with observation_type {args.obs} for {{N_STEPS}} steps",
+            f"Testing {gym_info} {args.env} with observation_type {args.obs} for {n_steps} steps",
         )
         env.reset()
 
@@ -384,7 +375,7 @@ def parse_args() -> argparse.Namespace:
     # List subcommand
     list_parser = subparsers.add_parser("list", aliases=["l"], help="Print a list of environment ids.")
     list_parser.add_argument(
-        "filters", nargs="?", type=str, help="Comma-separated filter keywords (supports negations with '!')"
+        "filters", nargs="?", type=str, help="Comma-separated filter keywords (supports negations with '^')"
     )
     list_parser.add_argument("--sensitive", "-s", action="store_true", help="Make filter case-sensitive.")
     list_parser.add_argument(

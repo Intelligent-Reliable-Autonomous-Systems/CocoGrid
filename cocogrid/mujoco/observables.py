@@ -7,7 +7,7 @@ from dm_control.composer.observation import observable as observable_lib
 from dm_control.locomotion.walkers import base
 from minigrid.minigrid_env import MiniGridEnv
 
-from cocogrid.state.cocogrid_state import CocogridState
+from cocogrid.common.cocogrid_state import CocogridState
 
 if TYPE_CHECKING:
     from cocogrid.mujoco.cocogrid_arena import CocogridArena

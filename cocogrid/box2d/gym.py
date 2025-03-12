@@ -1,14 +1,20 @@
-from typing import Any, Callable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Callable
 
 import gymnasium as gym
 import numpy as np
 import pygame
 from minigrid.core.world_object import Ball, Box, Door, Goal, Key, Lava, Wall
 
-from cocogrid.color import get_color_rgba_255
-from cocogrid.entities import ObjectEnum, get_color_id
-from cocogrid.state import CocogridState, get_observation_spec
+from cocogrid.common.cocogrid_state import CocogridState
+from cocogrid.common.color import get_color_rgba_255
+from cocogrid.common.entity import ObjectEnum, get_color_id
 from cocogrid.utils.minigrid import get_door_direction, minigrid_tile_generator
+
+if TYPE_CHECKING:
+    from cocogrid.box2d.box2d_agent import Box2DAgent
+    from cocogrid.common.observation import ObservationSpecification
 
 try:
     from Box2D.b2 import (
@@ -52,9 +58,9 @@ class Box2DEnv(gym.Env):
     def __init__(
         self,
         minigrid_env: gym.Env,
-        walker_type: str,
+        agent: Box2DAgent,
         get_task_function: Callable,
-        observation_type=None,
+        observation_spec: ObservationSpecification,
         xy_scale: float = 1,
         spawn_position=None,
         spawn_sampler=None,
@@ -68,7 +74,7 @@ class Box2DEnv(gym.Env):
         super().__init__()
 
         self.minigrid_env = minigrid_env
-        self.walker_type = walker_type
+        self.agent = agent
         self.xy_scale = xy_scale
         self.minigrid_seed = seed
         self._minigrid_options = reset_options or {}
@@ -107,7 +113,7 @@ class Box2DEnv(gym.Env):
         self.world = None
         self._generate_arena(minigrid_seed=self.minigrid_seed, minigrid_options=self._minigrid_options)
 
-        self._observation_spec = get_observation_spec(observation_type)
+        self._observation_spec = observation_spec
         self.observation_space, self._observation_function = self._observation_spec.build_observation_space(
             self._get_state()
         )
@@ -121,7 +127,7 @@ class Box2DEnv(gym.Env):
             for joint in self.world.joints:
                 self.world.DestroyJoint(joint)
 
-            del self.agent
+            self.agent.delete_body()
             del self.world
             del self._grid
             del self.color_mapping
@@ -274,13 +280,8 @@ class Box2DEnv(gym.Env):
         else:
             agent_x, agent_y = self.minigrid_env.agent_pos
             pos = ((agent_x + 0.5) * self.xy_scale, -(agent_y + 0.5) * self.xy_scale)
-        pos = tuple([float(x) for x in pos[:2]])  # box2d doesn't like numpy scalars
-        self.agent = self.world.CreateDynamicBody(position=pos)
-        # circle = self.agent.CreateCircleFixture(radius=0.4, density=1, friction=0.3)
-        self.agent.CreatePolygonFixture(box=(0.3, 0.3), density=1, friction=0.3)
-        self.agent.linearDamping = 3
-        self.agent.fixedRotation = True
-        self.color_mapping[self.agent] = (115, 115, 115, 255)
+        pos = tuple(float(x) for x in pos[:2])  # box2d doesn't like numpy scalars
+        self.agent.construct_body(self.world, pos)
 
     def reset(self, seed=None, options=None):
         if not self._skip_initializing:
@@ -300,9 +301,9 @@ class Box2DEnv(gym.Env):
         return self._observation_function(self.state), {}
 
     def step(self, action: np.ndarray) -> tuple[Any, float, bool, bool, dict[str, Any]]:
-        agent_vel = self.agent.linearVelocity.tuple
+        agent_vel = self.agent.body.linearVelocity.tuple
         if agent_vel[0] ** 2 + agent_vel[1] ** 2 < MAX_SPEED:
-            self.agent.ApplyForceToCenter((MOVE_FORCE * float(action[2]), -MOVE_FORCE * float(action[1])), True)
+            self.agent.body.ApplyForceToCenter((MOVE_FORCE * float(action[2]), -MOVE_FORCE * float(action[1])), True)
 
         if action[0] >= 0.5:
             self._do_grab()
@@ -346,7 +347,7 @@ class Box2DEnv(gym.Env):
         def square_dist(x1, y1, x2, y2):
             return (x1 - x2) ** 2 + (y1 - y2) ** 2
 
-        agent_pos = np.array(self.agent.position.tuple)
+        agent_pos = np.array(self.agent.body.position.tuple)
         if self.grabbed_object_idx >= 0:
             (grabbed_obj, grabbed_type, grabbed_color, _) = self.objects[self.grabbed_object_idx]
             obj_pos = grabbed_obj.position.tuple
@@ -380,7 +381,7 @@ class Box2DEnv(gym.Env):
                     self.objects[idx] = (obj, object_id, color, 1)
         if self.grabbed_object_idx >= 0:
             grabbed_obj = self.objects[self.grabbed_object_idx][0]
-            walker_facing_vec = self.agent.GetWorldVector((0, 1)).tuple
+            walker_facing_vec = self.agent.body.GetWorldVector((0, 1)).tuple
 
             # get vectors in cardinal directions relative to facing direction
             target_vecs = np.array(
@@ -406,16 +407,16 @@ class Box2DEnv(gym.Env):
             force = (
                 GRAB_FORCE * target_diff
                 - GRAB_DAMPENING * obj_vel
-                + GRAB_VEL_ALIGN * np.array(self.agent.linearVelocity.tuple)
+                + GRAB_VEL_ALIGN * np.array(self.agent.body.linearVelocity.tuple)
             )
             grabbed_obj.ApplyForceToCenter(tuple(force.astype(float)), True)
 
     def _get_state(self):
         walker_pose = np.zeros(13, dtype=np.float32)
-        walker_pose[:2] = self.agent.position.tuple
-        walker_pose[3] = self.agent.angle
-        walker_pose[7:9] = self.agent.linearVelocity.tuple
-        walker_pose[9] = self.agent.angularVelocity
+        walker_pose[:2] = self.agent.body.position.tuple
+        walker_pose[3] = self.agent.body.angle
+        walker_pose[7:9] = self.agent.body.linearVelocity.tuple
+        walker_pose[9] = self.agent.body.angularVelocity
 
         object_array = np.zeros((len(self.objects), 16))
         for index, (obj, object_id, color_id, state) in enumerate(self.objects):
@@ -435,10 +436,10 @@ class Box2DEnv(gym.Env):
         return CocogridState(self._grid, self.xy_scale, object_array, walker_pose, {})
 
     def _set_state(self, state: CocogridState):
-        self.agent.position = tuple(state.pose[:2].tolist())
-        self.agent.angle = float(state.pose[4])
-        self.agent.linearVelocity = tuple(state.pose[7:9].tolist())
-        self.agent.angularVelocity = float(state.pose[9])
+        self.agent.body.position = tuple(state.pose[:2].tolist())
+        self.agent.body.angle = float(state.pose[4])
+        self.agent.body.linearVelocity = tuple(state.pose[7:9].tolist())
+        self.agent.body.angularVelocity = float(state.pose[9])
 
         objects = state.objects
         for obj_idx in range(objects.shape[0]):
@@ -475,12 +476,15 @@ class Box2DEnv(gym.Env):
             self.clock = pygame.time.Clock()
 
         if "world" not in self.__dict__:
-            return  # reset() not called yet
+            return None # reset() not called yet
 
         self.surf = pygame.Surface((width, height))
 
         pixel_per_meter = min(width / self.arena_width, height / self.arena_height)
         for body in self.world.bodies:
+            if body == self.agent.body:
+                self.agent.draw_body(pixel_per_meter, height, self.surf)
+                continue
             color = self.color_mapping.get(body, (255, 255, 255, 255))
             for fixture in body.fixtures:
                 fixture.shape.draw(body, color, pixel_per_meter, height, self.surf)
@@ -500,12 +504,10 @@ class Box2DEnv(gym.Env):
             self.screen.fill(0)
             self.screen.blit(self.surf, (0, 0))
             pygame.display.flip()
-        elif mode == "rgb_array":
+            return None
+        if mode == "rgb_array" or mode == "state_pixels":
             return self._create_image_array(self.surf, (width, height))
-        elif mode == "state_pixels":
-            return self._create_image_array(self.surf, (width, height))
-        else:
-            return self.isopen
+        return self.isopen
 
     def _create_image_array(self, screen, size):
         scaled_screen = pygame.transform.smoothscale(screen, size)

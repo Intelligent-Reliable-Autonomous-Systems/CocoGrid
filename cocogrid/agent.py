@@ -35,6 +35,7 @@ class AgentRegistry:
     """A static class to register agent classes."""
 
     _agents: ClassVar[dict[str, type[Agent]]] = {}
+    _initialized: ClassVar[bool] = False
 
     @classmethod
     def register(cls, agent_class: type[Agent], agent_id: str | None = None) -> None:
@@ -56,9 +57,22 @@ class AgentRegistry:
             raise NotRegisteredError(cls.__name__, agent_id)
         return cls._agents[agent_id]
 
+    @classmethod
+    def initialize(cls) -> None:
+        """Mark as initialized."""
+        cls._initialized = True
+
+    @classmethod
+    def is_initialized(cls) -> bool:
+        """Return whether registry has been initialized."""
+        return cls._initialized
+
 
 def register_agents() -> None:
     """Register all the available agents into the registry."""
+    from cocogrid.box2d.box2d_agent import Box2DAgent
     from cocogrid.mujoco.mujoco_agent import MuJoCoBallAgent
 
+    AgentRegistry.initialize()
     AgentRegistry.register(MuJoCoBallAgent)
+    AgentRegistry.register(Box2DAgent)

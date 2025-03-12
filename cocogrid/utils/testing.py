@@ -10,43 +10,43 @@ def add_cocogrid_arguments(parser: argparse.ArgumentParser, include_seed=False, 
         help="Specifies the Cocogrid environment id.",
     )
     parser.add_argument(
-        "--walker",
-        "-w",
+        "--agent",
+        "-a",
         type=str,
-        default=defaults.get("walker", "ball"),
-        help="The type of the walker, from 'ball', 'ant', 'humanoid'",
+        default=defaults.get("agent", "mujoco/ball"),
+        help="The type of the agent, from 'mujoco/ball', 'mujoco/square', 'mujoco/ant', 'box2d', etc.",
     )
     parser.add_argument(
         "--scale",
         "-s",
         type=float,
         default=defaults.get("scale", 1),
-        help="The arena scale (minimum based on walker type)",
+        help="The arena scale (minimum 1 except for select agents)",
     )
     parser.add_argument(
         "--obs",
         "-o",
         type=str,
         default=defaults.get("obs", "full"),
-        help="Specifies the Cocogrid environment id.",
+        help="Specifies the observation type, from 'full', 'no-arena', 'object-one-hot'.",
     )
     parser.add_argument(
         "--timesteps",
         "-t",
         type=int,
-        default=defaults.get("timesteps", 200),
-        help="The maximum number of timesteps before truncating",
+        default=defaults.get("timesteps", 500),
+        help="The maximum number of timesteps before terminating.",
     )
-    parser.add_argument(
-        "--random-spawn",
-        action="store_true",
-        help="The walker is randomly positioned on reset",
-    )
-    parser.add_argument(
-        "--random-rotate",
-        action="store_true",
-        help="The walker is randomly oriented on reset",
-    )
+    # parser.add_argument(
+    #     "--random-spawn",
+    #     action="store_true",
+    #     help="The walker is randomly positioned on reset",
+    # )
+    # parser.add_argument(
+    #     "--random-rotate",
+    #     action="store_true",
+    #     help="The walker is randomly oriented on reset",
+    # )
     if include_seed:
         parser.add_argument(
             "--seed",

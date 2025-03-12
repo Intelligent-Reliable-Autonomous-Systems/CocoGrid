@@ -1,7 +1,16 @@
 """Register Cocogrid environments to gymnasium."""
 
-from cocogrid.agent import register_agents
-from cocogrid.suite import register_environments_and_tasks
+import sys
 
-register_agents()
-register_environments_and_tasks()
+import cocogrid.suite as suite
+from cocogrid.agent import AgentRegistry, register_agents
+
+
+def register_all() -> None:
+    """Register all CocoGrid agents, environments, and tasks."""
+    if not suite.IS_INITIALIZED:
+        suite.register_environments_and_tasks()
+    if not AgentRegistry.is_initialized() and "gymnasium" in sys.modules:
+        register_agents()
+
+register_all()
