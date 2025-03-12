@@ -1,7 +1,7 @@
 # CocoGrid
 
 <!-- ![Example CocoGrid environments](./assets/env_examples.png) -->
-<img src="./assets/env_examples.png.jpg" alt="Example CocoGrid environments" height="10rem"/>
+<img src="./assets/env_examples.png" alt="Example CocoGrid environments" height="200rem"/>
 
 A continuous control RL environment that extends the discrete gridworld [Minigrid](https://github.com/Farama-Foundation/Minigrid) to a continuous action and observation space. Cocogrid supports both 2D and 3D physics with [Box2D](https://pypi.org/project/Box2D/) and MuJoCo ([dm_control](https://github.com/google-deepmind/dm_controlhttps://)). Supports many grid configurations, multiple objects, and custom tasks. It is easily extensible.
 
