@@ -61,11 +61,12 @@ def args_to_gym_env(args, **env_kwargs):
 
     return gymnasium.make(
         args.env,
-        walker_type=args.walker,
-        seed=args.seed if hasattr(args, "seed") else None,
+        agent=args.agent,
+        observation=args.obs,
         xy_scale=args.scale,
-        random_spawn=args.random_spawn,
-        random_rotation=args.random_rotate,
+        seed=args.seed if hasattr(args, "seed") else None,
+        # random_spawn=args.random_spawn,
+        # random_rotation=args.random_rotate,
         timesteps=args.timesteps,
         **env_kwargs,
     )

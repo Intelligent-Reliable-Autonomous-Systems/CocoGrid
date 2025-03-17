@@ -239,6 +239,8 @@ def list_environments(args: argparse.Namespace) -> None:
     # Apply exclusion filtering (remove matches for exclude filters)
     envs = [env for env in envs if not any(f in sensitivity(env) for f in exclude_filters)]
 
+    envs.sort()
+
     if args.vertical:
         print("\n".join(envs))
     else:

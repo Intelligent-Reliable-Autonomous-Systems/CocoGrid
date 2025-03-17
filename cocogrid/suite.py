@@ -29,10 +29,14 @@ def get_cocogrid_gymnasium_env(
     from gymnasium.wrappers.order_enforcing import OrderEnforcing
 
     from cocogrid.common.observation import get_observation_spec
+    from cocogrid.minigrid import CUSTOM_MINIGRID_ENVS
     from cocogrid.tasks import TaskRegistry
+
     if isinstance(minigrid, gym.Env):
         minigrid_env = minigrid
     elif isinstance(minigrid, str):
+        if minigrid in CUSTOM_MINIGRID_ENVS:
+            minigrid = f'cocogrid/{minigrid}'
         minigrid_env = gym.make(minigrid, disable_env_checker=True)
         if isinstance(minigrid_env, OrderEnforcing):
             minigrid_env = minigrid_env.env
@@ -60,7 +64,9 @@ def get_cocogrid_gymnasium_env(
     observation_spec = get_observation_spec(observation) if isinstance(observation, str) else observation
     engine = agent.get_engine()
     return engine.build_gymnasium_env(
-        minigrid_env, agent, get_task_function, observation_spec, timesteps=timesteps, xy_scale=xy_scale, **env_kwargs)
+        minigrid_env, agent, get_task_function, observation_spec, timesteps=timesteps, xy_scale=xy_scale, **env_kwargs
+    )
+
 
 IS_INITIALIZED = False
 REGISTERED_GYM_IDS = set()
@@ -90,6 +96,8 @@ def register_environments_and_tasks() -> None:
 
     # Register CocoGrid-equivalent environments.
     for minigrid_id in minigrid_env_ids:
-        cocogrid_id = minigrid_id.replace("MiniGrid", "Cocogrid")
-        gym_register(id=cocogrid_id, entry_point=functools.partial(get_cocogrid_gymnasium_env, minigrid_id))
-        REGISTERED_GYM_IDS.add(cocogrid_id)
+        cocogrid_id = minigrid_id.replace("MiniGrid-", "")
+        gym_register(
+            id=cocogrid_id, entry_point=functools.partial(get_cocogrid_gymnasium_env, minigrid_id)
+        )
+        REGISTERED_GYM_IDS.add(f"cocogrid/{cocogrid_id}")

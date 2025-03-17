@@ -155,8 +155,8 @@ class CocogridArena(MazeArena):
     def initialize_arena_mjcf(self, random_state=None):
         if not self._already_initialized:
             # use _reset_seed and _reset_options for the current episode, then flush.
-            minigrid_seed=self._reset_seed or self._minigrid_seed
-            minigrid_options={**self._minigrid_options, **self._reset_options}
+            minigrid_seed = self._reset_seed or self._minigrid_seed
+            minigrid_options = {**self._minigrid_options, **self._reset_options}
             self._minigrid.reset(seed=minigrid_seed, options=minigrid_options)
             self._reset_seed = None
             self._reset_options = {}
@@ -226,7 +226,7 @@ class CocogridArena(MazeArena):
 
     @property
     def walker_position(self):
-        return self.current_state.get_walker_position()
+        return self.current_state.get_agent_position()
 
     @property
     def walker_grid_position(self):

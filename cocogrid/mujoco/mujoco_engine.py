@@ -22,7 +22,7 @@ class MujocoEngine(Engine):
     @property
     def name(self) -> str:
         """Get the physics engine name."""
-        return "MuJoCo"
+        return "mujoco"
 
     def build_gymnasium_env(self,
             minigrid: gym.Env,

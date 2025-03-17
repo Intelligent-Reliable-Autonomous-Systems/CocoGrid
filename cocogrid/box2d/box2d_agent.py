@@ -24,7 +24,12 @@ class Box2DAgent(Agent):
     @classmethod
     def get_name(cls) -> str:
         """Get the agent name."""
-        return "box2d"
+        return "square"
+
+    @classmethod
+    def is_default(cls) -> bool:
+        """Get whether agent should be the default agent for its engine."""
+        return True
 
     @property
     def body(self):

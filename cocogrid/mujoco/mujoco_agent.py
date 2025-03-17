@@ -60,3 +60,8 @@ class MuJoCoBallAgent(MuJoCoAgent):
     def get_name(cls) -> str:
         """Get the agent name."""
         return "ball"
+
+    @classmethod
+    def is_default(cls) -> bool:
+        """Get whether agent should be the default agent for its engine."""
+        return True

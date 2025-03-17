@@ -8,7 +8,7 @@ authors = [
 ]
 license = "MIT"
 license-files = ["LICENSE.txt"]
-homepage = "https://gitlab.engr.oregonstate.edu/jewettje/minimujo"
+homepage = "https://github.com/Intelligent-Reliable-Autonomous-Systems/CocoGrid"
 readme = "README.md"
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -27,7 +27,6 @@ classifiers = [
 ]
 dependencies = [
     "dm-control",
-    "swig",
     "gymnasium[box2d]",
     "labmaze",
     "minigrid"
@@ -43,10 +42,10 @@ dev = [
 cocogrid = "cocogrid.__main__:main"
 
 [project.entry-points."gymnasium.envs"]
-cocogrid = "cocogrid.__init__:register_all"
+cocogrid = "cocogrid.__init__:gymnasium_entrypoint"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "swig"]
 build-backend = "hatchling.build"
 
 [tool.ruff.lint]

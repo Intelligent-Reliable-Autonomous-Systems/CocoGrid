@@ -18,7 +18,7 @@ class Box2DEngine(Engine):
     @property
     def name(self) -> str:
         """Get the physics engine name."""
-        return "Box2D"
+        return "box2d"
 
     def build_gymnasium_env(
         self,
@@ -39,5 +39,7 @@ class Box2DEngine(Engine):
             agent,
             get_task_function,
             observation_spec=observation_spec,
+            render_mode=render_mode,
+            render_width=render_width,
             **env_kwargs,
         )

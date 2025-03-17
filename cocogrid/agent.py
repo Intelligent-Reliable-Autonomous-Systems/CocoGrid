@@ -26,6 +26,11 @@ class Agent(ABC):
         """Get the physics engine to use for the agent."""
         pass
 
+    @classmethod
+    def is_default(cls) -> bool:
+        """Get whether agent should be the default agent for its engine."""
+        return False
+
     @abstractmethod
     def __init__(self, **kwargs: Any) -> None:
         """Initialize the agent with optional kwargs."""
@@ -40,10 +45,17 @@ class AgentRegistry:
     @classmethod
     def register(cls, agent_class: type[Agent], agent_id: str | None = None) -> None:
         """Register an agent class by its name or by a specified id."""
-        agent_id = agent_id or agent_class.get_name()
+        engine_name = agent_class.get_engine().name
+        agent_id = agent_id or f'{engine_name}/{agent_class.get_name()}'
         if agent_id in cls._agents:
             raise AlreadyRegisteredError(cls.__name__, agent_id)
         cls._agents[agent_id] = agent_class
+
+        # Additionally check if should be registered as default for its engine.
+        if agent_class.is_default():
+            if engine_name in cls._agents:
+                raise AlreadyRegisteredError(cls.__name__, engine_name)
+            cls._agents[engine_name] = agent_class
 
     @classmethod
     def exists(cls, agent_id: str) -> bool:

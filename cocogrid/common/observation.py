@@ -201,7 +201,7 @@ class ObservationSpecification:
             o_idx = self._object_order[object_idx]
             if o_idx >= len(state.objects):
                 return obs
-            obj = state.objects[self._object_order[object_idx]]
+            obj = state.objects[o_idx]
             idx = 0
             type = ObservationSpecification.get_maybe_one_hot(obj[0], self._object_type_one_hot)
             obs[idx:idx+len(type)] = type

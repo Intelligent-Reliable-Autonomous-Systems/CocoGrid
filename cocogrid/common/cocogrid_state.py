@@ -37,12 +37,14 @@ class CocogridState:
     POSE_IDX_POS: ClassVar[int] = 0
     POSE_IDX_QUAT: ClassVar[int] = 3
     POSE_IDX_VEL: ClassVar[int] = 7
+    POSE_DIM: ClassVar[int] = 13
     OBJECT_IDX_TYPE: ClassVar[int] = 0
     OBJECT_IDX_POS: ClassVar[int] = 1
     OBJECT_IDX_DOOR_ORIENTATION: ClassVar[int] = 5
     OBJECT_IDX_VEL: ClassVar[int] = 8
     OBJECT_IDX_COLOR: ClassVar[int] = 14
     OBJECT_IDX_STATE: ClassVar[int] = 15
+    OBJECT_DIM: ClassVar[int] = 16
 
     @staticmethod
     def color_to_idx(color: str) -> int:
@@ -86,7 +88,7 @@ class CocogridState:
         """Get the total shape of the arena, grid.shape * xy_scale."""
         return np.array(self.grid.shape) * self.xy_scale
 
-    def get_walker_position(self, dim: Literal[2, 3] = 3) -> np.ndarray:
+    def get_agent_position(self, dim: Literal[2, 3] = 3) -> np.ndarray:
         """Get the position of the agent.
 
         Input:
@@ -94,7 +96,7 @@ class CocogridState:
         """
         return self.pose[:dim]
 
-    def get_normalized_walker_position(self, without_border: bool = False) -> np.ndarray:
+    def get_normalized_position(self, without_border: bool = False) -> np.ndarray:
         """Get the position of the agent, normalized to a range [0,1] x [0,1]. Make the y axis positive.
 
         Input:
@@ -105,7 +107,7 @@ class CocogridState:
         pos[:2] = (pos[:2] / self.xy_scale - int(without_border)) / (self.grid.shape[0] - 2 * int(without_border))
         return pos
 
-    def get_walker_velocity(self, dim: Literal[2, 3] = 3) -> np.ndarray:
+    def get_agent_velocity(self, dim: Literal[2, 3] = 3) -> np.ndarray:
         """Get the agent velocity.
 
         Input:
@@ -113,10 +115,29 @@ class CocogridState:
         """
         return self.pose[7 : 7 + dim]
 
-    @staticmethod
-    def get_object_pos_slice(dim: Literal[2, 3] = 3) -> slice:
-        """Get a slice of the index range for an object's position."""
-        return slice(CocogridState.OBJECT_IDX_POS, CocogridState.OBJECT_IDX_POS + dim)
+    def get_object_pos(self, object_index: int, dim: Literal[2, 3] = 3) -> np.ndarray:
+        """Get an object's position.
+
+        Input:
+        object_index (int): The index of the object in the state.
+        dim (int): The position dimension. 2 for xy, 3 for xyz.
+
+        Return: An np.ndarray of the object's position.
+        """
+        obj_idx = CocogridState.POSE_DIM + CocogridState.OBJECT_DIM * object_index
+        return self.objects[obj_idx + CocogridState.OBJECT_IDX_POS : obj_idx + CocogridState.OBJECT_IDX_POS + dim]
+
+    def get_object_vel(self, object_index: int, dim: Literal[2, 3, 6] = 3) -> np.ndarray:
+        """Get an object's velocity.
+
+        Input:
+        object_index (int): The index of the object in the state.
+        dim (int): The velocity dimension. 2 for xy, 3 for xyz, 6 for linear+angular velocity.
+
+        Return: An np.ndarray of the object's velocity.
+        """
+        obj_idx = CocogridState.POSE_DIM + CocogridState.OBJECT_DIM * object_index
+        return self.objects[obj_idx + CocogridState.OBJECT_IDX_VEL : obj_idx + CocogridState.OBJECT_IDX_VEL + dim]
 
     @staticmethod
     def get_grid_state_from_minigrid(minigrid_env: MiniGridEnv) -> np.ndarray:
